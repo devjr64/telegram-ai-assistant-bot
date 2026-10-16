@@ -1,14 +1,14 @@
 # Development Guide — Telegram AI Bot
 
-Guía para desarrolladores que mantienen este bot. **Solo para desarrollo** — el bot de Telegram jamás lee este archivo (ver `AGENTS.md`).
+Guide for developers maintaining this bot. **For development only** — the Telegram bot never reads this file (see `AGENTS.md`).
 
-## Requisitos
+## Requirements
 
 - Python 3.12
-- Docker + Docker Compose (para el contenedor)
-- `.env` creado desde `.env.example` (con `BOT_TOKEN` y `OPENCODE_GO_API_KEY`)
+- Docker + Docker Compose (for the container)
+- `.env` created from `.env.example` (with `BOT_TOKEN` and `OPENCODE_GO_API_KEY`)
 
-## Setup local
+## Local setup
 
 ```bash
 cd telegram-bot
@@ -18,252 +18,252 @@ pip install -r requirements.txt
 python main.py
 ```
 
-> Para probar con el bot real necesitas un token de @BotFather y tu ID en `AUTHORIZED_USERS`.
+> To test with the real bot you need a token from @BotFather and your ID in `AUTHORIZED_USERS`.
 
-## Dependencias (lockfile)
+## Dependencies (lockfile)
 
-Las dependencias están **pineadas** para que local, CI y VPS instalen exactamente el mismo set, y un deploy no rompa el bot silenciosamente cuando pip resuelve una versión nueva.
+Dependencies are **pinned** so that local, CI, and VPS install exactly the same set, and a deploy doesn't silently break the bot when pip resolves a newer version.
 
-- `requirements.in` — **dependencias directas declaradas** (el input, lo que se edita a mano).
-- `requirements.txt` — **lockfile generado**: deps directas + transitivas con versiones exactas. Es lo que instalan el Dockerfile y el CI. **No se edita a mano.**
-- `requirements-dev.txt` — dependencias de test (solo local/CI), también pineadas.
+- `requirements.in` — **declared direct dependencies** (the input, what you edit by hand).
+- `requirements.txt` — **generated lockfile**: direct + transitive deps with exact versions. This is what the Dockerfile and CI install. **Do not edit by hand.**
+- `requirements-dev.txt` — test dependencies (local/CI only), also pinned.
 
-### Por qué
+### Why
 
-Con rangos sueltos (`>=21.0`) el contenedor se reconstruye desde cero en cada deploy y pip elige la última versión disponible en ese momento, que puede diferir de lo probado en local. Ejemplo real: al generar este lock, una resolución fresca instalaba `openai==3.1.0` mientras el entorno de desarrollo tenía `openai==2.54.0` — sin el lock, el siguiente push habría desplegado una SDK 3.x que nadie había probado. Con el lock, el deploy instala exactamente lo validado con la suite.
+With loose ranges (`>=21.0`) the container rebuilds from scratch on every deploy and pip picks the latest version available at that moment, which may differ from what was tested locally. Real example: when generating this lock, a fresh resolution installed `openai==3.1.0` while the development environment had `openai==2.54.0` — without the lock, the next push would have deployed a 3.x SDK that nobody had tested. With the lock, the deploy installs exactly what was validated with the test suite.
 
-### Cómo regenerar el lock
+### How to regenerate the lock
 
-Cuando quieras actualizar dependencias:
+When you want to update dependencies:
 
 ```bash
-# 1) Edita requirements.in (añade/actualiza las deps directas)
-# 2) Genera el lock en el mismo entorno de producción (python:3.12-slim):
+# 1) Edit requirements.in (add/update direct deps)
+# 2) Generate the lock in the same production environment (python:3.12-slim):
 docker run --rm -v "$PWD":/w -w /w python:3.12-slim \
   sh -c "pip install -r requirements.in && pip freeze" > requirements.txt
-# 3) Añade el header de comentario del archivo (ver requirements.txt)
-# 4) Valida obligatoriamente con la suite completa:
+# 3) Add the comment header to the file (see requirements.txt)
+# 4) Mandatory validation with the full test suite:
 .venv/bin/pip install -r requirements.txt -r requirements-dev.txt
 .venv/bin/python -m pytest --cov=bot
 ```
 
-> Si una regeneración sube un major que rompe la suite, acota el rango en `requirements.in` (ej. `openai>=2.54,<3`) y regenera. El lock solo fija el resultado; la validación con tests es obligatoria antes de commitear.
+> If a regeneration bumps a major version that breaks the suite, narrow the range in `requirements.in` (e.g. `openai>=2.54,<3`) and regenerate. The lock only pins the result; validation with tests is mandatory before committing.
 
-## Docker SIEMPRE (recomendado para pruebas)
+## Docker ALWAYS (recommended for testing)
 
-> ⛔ **Este proyecto se ejecuta SIEMPRE en Docker** en producción, y lo recomendado para desarrollo también es Docker: `docker compose up -d --build`. Es el mismo contenedor que corre en el VPS, así que lo que pruebas localmente es exactamente lo que se despliega.
+> ⛔ **This project ALWAYS runs in Docker** in production, and Docker is also recommended for development: `docker compose up -d --build`. It's the same container that runs on the VPS, so what you test locally is exactly what gets deployed.
 
 ```bash
-docker compose up -d --build   # construye y arranca (lee tu .env local)
-docker compose logs -f         # ver logs
-docker compose up -d --build   # reiniciar tras cambios
-docker compose down -v         # borrar volumen de datos (¡cuidado!)
+docker compose up -d --build   # build and start (reads your local .env)
+docker compose logs -f         # view logs
+docker compose up -d --build   # restart after changes
+docker compose down -v         # delete data volume (careful!)
 ```
 
-> ⚠️ **El token de Telegram de desarrollo es distinto al de producción.** Tu `.env` local debe usar un `BOT_TOKEN` de **pruebas** (bot creado con @BotFather para desarrollo), jamás el token del bot en producción, que vive solo en el `.env` del VPS. Usar el token de producción en local **rompería el bot en vivo**. Los `AUTHORIZED_USERS` también pueden diferir entre entornos.
+> ⚠️ **The development Telegram token is different from the production one.** Your local `.env` must use a **test** `BOT_TOKEN` (bot created with @BotFather for development), never the production bot token, which lives only in the VPS's `.env`. Using the production token locally **would break the live bot**. `AUTHORIZED_USERS` may also differ between environments.
 
-## Estructura de trabajo
+## Working structure
 
-- **Código del bot**: `main.py` + `bot/` — esto es lo único que va al contenedor
-- **Documentación de desarrollo**: `AGENTS.md`, `README.md`, `docs/` — jamás va al contenedor
-- **Datos de usuario**: `DATA_DIR` (`/app/data` en Docker) — jamás va a git
+- **Bot code**: `main.py` + `bot/` — this is the only thing that goes into the container
+- **Development docs**: `AGENTS.md`, `README.md`, `docs/` — never goes into the container
+- **User data**: `DATA_DIR` (`/app/data` in Docker) — never goes to git
 
-## Cómo añadir una tool al modelo
+## How to add a tool to the model
 
-Las tools son el único puente entre el modelo y el sistema. Pasos:
+Tools are the only bridge between the model and the system. Steps:
 
-1. **Definir la tool** en `TOOL_DEFINITIONS` (`bot/tools.py`):
+1. **Define the tool** in `TOOL_DEFINITIONS` (`bot/tools.py`):
    ```python
    {
        "type": "function",
        "function": {
            "name": "mi_tool",
-           "description": "Qué hace y CUÁNDO usarla (instrucciones para el modelo).",
+           "description": "What it does and WHEN to use it (instructions for the model).",
            "parameters": {"type": "object", "properties": {...}, "required": [...]},
        },
    },
    ```
-2. **Añadir el dispatch** en `_dispatch()`:
+2. **Add the dispatch** in `_dispatch()`:
    ```python
    if name == "mi_tool":
        resultado = await mi_funcion(args)
        return json.dumps(resultado)
    ```
-3. **Implementar la lógica** en su módulo (nuevo o existente).
-4. **Siempre devolver JSON string** al modelo: `{"ok": True, ...}` o `{"ok": False, "error": "..."}`. Nunca excepciones crudas.
-5. **Validar valores de dominio** antes de persistir (por ejemplo, estados y prioridades de proyectos contra `PROJECT_STATUSES` / `PROJECT_PRIORITIES`); devuelve el error en JSON para que el modelo lo maneje en español.
-6. **Si la tool lista contenido para el usuario** (proyectos, recordatorios, etc.), devuelve además un campo `formatted` con el texto ya en viñetas (•), siguiendo el patrón de `_format_projects_list` / `_format_reminders_list` (`bot/tools.py`). El modelo debe repetir ese texto tal cual, **sin convertirlo a tabla Markdown** (Telegram no las renderiza bien) — indica esa instrucción en la descripción de la tool.
+3. **Implement the logic** in its module (new or existing).
+4. **Always return JSON string** to the model: `{"ok": True, ...}` or `{"ok": False, "error": "..."}`. Never raw exceptions.
+5. **Validate domain values** before persisting (e.g. project statuses and priorities against `PROJECT_STATUSES` / `PROJECT_PRIORITIES`); return the error in JSON so the model handles it in Spanish.
+6. **If the tool lists content for the user** (projects, reminders, etc.), it also returns a `formatted` field with text already in bullet points (•), following the pattern of `_format_projects_list` / `_format_reminders_list` (`bot/tools.py`). The model must repeat that text as-is, **without converting it to a Markdown table** (Telegram doesn't render them well) — include this instruction in the tool description.
 
-> ⛔ **NUNCA** añadir una tool que lea archivos del proyecto (AGENTS.md, README, docs/…). Ver regla de oro en `AGENTS.md`.
+> ⛔ **NEVER** add a tool that reads project files (AGENTS.md, README, docs/…). See golden rule in `AGENTS.md`.
 
-> Las tools de memoria (`journal_append`, `memory_read`, `memory_recall`, `memory_insights`) se añadieron siguiendo **exactamente** este procedimiento: definición en `TOOL_DEFINITIONS`, dispatch en `_dispatch()`, lógica en `bot/memory.py` + `bot/summarizer.py`, y **siempre JSON string** de vuelta al modelo. Si añades otra tool de memoria, respeta el mismo patrón y el scope restringido a `DATA_DIR/memory/{user_id}/`.
+> The memory tools (`journal_append`, `memory_read`, `memory_recall`, `memory_insights`) were added following **exactly** this procedure: definition in `TOOL_DEFINITIONS`, dispatch in `_dispatch()`, logic in `bot/memory.py` + `bot/summarizer.py`, and **always JSON string** back to the model. If you add another memory tool, follow the same pattern and the scope restricted to `DATA_DIR/memory/{user_id}/`.
 
-## Cómo añadir un comando
+## How to add a command
 
-1. Crear/editar el handler en `bot/handlers.py` (o `bot/project_commands.py` si es de proyectos).
-2. Registrar el comando en `bot/bot.py` (`app.add_handler(CommandHandler("micomando", mi_handler))`).
-3. Si el comando necesita IA, usar el cliente de `bot.ai_client`.
-4. Validar entradas sensibles (por ejemplo, estados y prioridades de proyectos contra `PROJECT_STATUSES` / `PROJECT_PRIORITIES`) y devolver errores claros al usuario.
-5. Documentar en `README.md` (tabla de comandos).
+1. Create/edit the handler in `bot/handlers.py` (or `bot/project_commands.py` if it's project-related).
+2. Register the command in `bot/bot.py` (`app.add_handler(CommandHandler("micomando", mi_handler))`).
+3. If the command needs AI, use the client from `bot.ai_client`.
+4. Validate sensitive inputs (e.g. project statuses and priorities against `PROJECT_STATUSES` / `PROJECT_PRIORITIES`) and return clear errors to the user.
+5. Document in `README.md` (commands table).
 
-> **Convención de nombres**: los comandos expuestos a los usuarios están en español, en minúsculas y sin guiones bajos (p. ej. `/nuevoproyecto`, `/estadoproyecto`, `/prioridadproyecto`). Mantén ese patrón para nuevos comandos.
+> **Naming convention**: commands exposed to users are in Spanish, lowercase, and without underscores (e.g. `/nuevoproyecto`, `/estadoproyecto`, `/prioridadproyecto`). Maintain this pattern for new commands.
 
-## Nota: API de python-telegram-bot v22 (botones inline)
+## Note: python-telegram-bot v22 API (inline buttons)
 
-El proyecto requiere `python-telegram-bot>=21` (instalada la v22). En v22, el
-método `Message.edit_message_text()` fue **eliminado** — usarlo lanza en
+The project requires `python-telegram-bot>=21` (v22 installed). In v22, the
+`Message.edit_message_text()` method was **removed** — using it raises at
 runtime `AttributeError: 'Message' object has no attribute 'edit_message_text'`.
-Los tests **no** lo detectan porque `tests/fakes.py` define fakes propios
-(`FakeMessage`) que sí tienen ese método.
+Tests **don't** catch this because `tests/fakes.py` defines its own fakes
+(`FakeMessage`) that do have that method.
 
-Para editar el mensaje de un botón inline usa siempre el método del propio
-`CallbackQuery`:
+To edit an inline button's message, always use the method on `CallbackQuery`
+itself:
 
 ```python
-await query.edit_message_text("Texto nuevo")   # ✅ correcto (PTB v22)
-# await query.message.edit_message_text(...)   # ❌ eliminado en v22
+await query.edit_message_text("Texto nuevo")   # ✅ correct (PTB v22)
+# await query.message.edit_message_text(...)   # ❌ removed in v22
 ```
 
-Los tests simulan esto en `FakeCallbackQuery.edit_message_text`
-(`tests/fakes.py`), que delega en el mensaje y registra en
+Tests simulate this in `FakeCallbackQuery.edit_message_text`
+(`tests/fakes.py`), which delegates to the message and records in
 `query.message.edited_messages`.
 
-## Compartición de proyectos (ACL)
+## Project sharing (ACL)
 
-Los proyectos pueden compartirse: el **dueño** vive en `projects.user_id` (fuente de verdad única) y los invitados en `project_members` (un único rol de colaborador completo). La tabla `users` guarda los perfiles Telegram (`username`, `first_name`) para resolver `@username → user_id`.
+Projects can be shared: the **owner** lives in `projects.user_id` (single source of truth) and invitees in `project_members` (a single full collaborator role). The `users` table stores Telegram profiles (`username`, `first_name`) to resolve `@username → user_id`.
 
-**Reglas de oro al tocar este código:**
+**Golden rules when touching this code:**
 
-1. **Toda lectura/escritura de un proyecto pasa por `get_project_for_user(user_id, slug)`** (devuelve el proyecto solo si eres dueño o miembro). No consultes `get_project_by_slug` para operaciones de usuario — es la puerta que evita filtrar proyectos ajenos. En `project_commands._find_project` y `tools._resolve_slug` ya está aplicado.
-2. **Solo el dueño invita/remueve**: `is_owner` se verifica en el comando/tool **y** de nuevo dentro de `add_project_member`/`remove_project_member` (defensa en profundidad). Un caller nuevo nunca debe saltarse la capa de datos.
-3. **Auto-invitación rechazada**: `add_project_member` devuelve error si `user_id == invited_by`; no lo permitas tampoco en la capa de UI.
-4. **Las rutas de archivos usan SIEMPRE el owner**: `read_project_files(project["user_id"], ...)` — el invitado lee/escribe en la carpeta del dueño (`projects/{owner_id}/{slug}/`), nunca en la suya.
-5. **El `user_id` siempre se inyecta desde el update de Telegram** en `execute_tool(name, args, user_id)` — jamás desde los argumentos del modelo.
-6. **Regla de 3 urgentes contra el dueño**: si un invitado edita un proyecto compartido urgente, los pre-checks usan `project["user_id"]` (no el `user_id` que actúa).
-7. **Resolver `@username`**: el usuario a invitar debe estar en la tabla `users`, que se puebla con `upsert_user` en cada update (mensaje, voz, foto y `/start`). `resolve_username` es determinista (`ORDER BY updated_at DESC LIMIT 1`) para no enrutar a un username reutilizado.
+1. **Every read/write of a project goes through `get_project_for_user(user_id, slug)`** (returns the project only if you're the owner or a member). Don't use `get_project_by_slug` for user operations — it's the gate that prevents filtering other people's projects. Already applied in `project_commands._find_project` and `tools._resolve_slug`.
+2. **Only the owner invites/removes**: `is_owner` is checked in the command/tool **and** again inside `add_project_member`/`remove_project_member` (defense in depth). A new caller must never bypass the data layer.
+3. **Self-invitation rejected**: `add_project_member` returns an error if `user_id == invited_by`; don't allow it in the UI layer either.
+4. **File paths ALWAYS use the owner**: `read_project_files(project["user_id"], ...)` — the invitee reads/writes in the owner's folder (`projects/{owner_id}/{slug}/`), never in their own.
+5. **`user_id` is always injected from the Telegram update** in `execute_tool(name, args, user_id)` — never from model arguments.
+6. **Rule of 3 urgents against the owner**: if an invitee edits a shared urgent project, pre-checks use `project["user_id"]` (not the acting `user_id`).
+7. **Resolving `@username`**: the user to invite must be in the `users` table, populated with `upsert_user` on every update (message, voice, photo, and `/start`). `resolve_username` is deterministic (`ORDER BY updated_at DESC LIMIT 1`) to avoid routing to a reused username.
 
-Nuevos comandos de compartición: `/compartir <proyecto> @usuario` y `/quitaracceso <proyecto> @usuario`. Nuevas tools: `share_project`, `unshare_project`, `list_project_members`.
+New sharing commands: `/compartir <project> @user` and `/quitaracceso <project> @user`. New tools: `share_project`, `unshare_project`, `list_project_members`.
 
-## Eliminación de proyectos (solo archivados)
+## Project deletion (archived only)
 
-Para liberar espacio, un proyecto archivado puede **eliminarse definitivamente**. Es la única operación destructiva del bot, así que hay reglas estrictas (misma filosofía defensiva que la ACL):
+To free up space, an archived project can be **permanently deleted**. It's the only destructive operation in the bot, so there are strict rules (same defensive philosophy as the ACL):
 
-1. **Solo dueño**: `is_owner` se verifica en el comando/tool **y** dentro de `delete_project()` (`bot/projects.py`) — la capa de datos rechaza a cualquier `actor_id != projects.user_id`, igual que `remove_project_member`.
-2. **Solo archivado**: si el status no es `archivado`, `delete_project()` devuelve error. Un proyecto activo jamás se puede borrar directamente; hay que archivarlo antes con `/estadoproyecto <nombre> archivado`.
-3. **Confirmación**: `/eliminarproyecto <nombre>` no borra nada por sí solo — renderiza botones inline **"Sí, eliminar"** (`delproj:<id>`) / **"Cancelar"** (`delproj_cancel:<id>`). El `CallbackQueryHandler` `delete_project_callback` (patrón `^delproj(_cancel)?:\d+$`) re-valida auth/owner/archivado antes de ejecutar el borrado. La eliminación pedida por **texto natural** (tool `delete_project`) pasa por la misma confirmación: `handlers._forward_tool_confirmation` detecta el `confirmation_required` devuelto por la tool y envía los mismos botones al chat.
-4. **Cascada completa**: al borrar la fila de `projects`, `project_notes` y `project_members` se eliminan por FK `ON DELETE CASCADE`, y la carpeta `projects/{owner_id}/{slug}/` (overview, notes, context.json) se borra del disco con `_remove_project_dir` — protegido contra path traversal (`is_relative_to(PROJECTS_DIR)`).
-5. **Tool del modelo**: `delete_project` (IA) aplica las mismas reglas y **nunca borra directo** — devuelve `confirmation_required` (con el proyecto objetivo) y `handlers._forward_tool_confirmation` se encarga de mostrar los botones; la descripción de la tool insiste en que es **irreversible** y solo debe usarse ante petición explícita del usuario.
-6. **El `user_id` nunca viene de los args del modelo** ni del `callback_data` — siempre del update de Telegram.
+1. **Owner only**: `is_owner` is checked in the command/tool **and** inside `delete_project()` (`bot/projects.py`) — the data layer rejects any `actor_id != projects.user_id`, just like `remove_project_member`.
+2. **Archived only**: if the status isn't `archivado`, `delete_project()` returns an error. An active project can never be deleted directly; you must archive it first with `/estadoproyecto <name> archivado`.
+3. **Confirmation**: `/eliminarproyecto <name>` doesn't delete anything by itself — it renders inline buttons **"Yes, delete"** (`delproj:<id>`) / **"Cancel"** (`delproj_cancel:<id>`). The `CallbackQueryHandler` `delete_project_callback` (pattern `^delproj(_cancel)?:\d+$`) re-validates auth/owner/archived before executing the deletion. Deletion requested via **natural language** (tool `delete_project`) goes through the same confirmation: `handlers._forward_tool_confirmation` detects the `confirmation_required` returned by the tool and sends the same buttons to the chat.
+4. **Full cascade**: when deleting the `projects` row, `project_notes` and `project_members` are deleted via FK `ON DELETE CASCADE`, and the folder `projects/{owner_id}/{slug}/` (overview, notes, context.json) is deleted from disk with `_remove_project_dir` — protected against path traversal (`is_relative_to(PROJECTS_DIR)`).
+5. **Model tool**: `delete_project` (AI) applies the same rules and **never deletes directly** — it returns `confirmation_required` (with the target project) and `handlers._forward_tool_confirmation` handles showing the buttons; the tool description insists it's **irreversible** and should only be used upon explicit user request.
+6. **`user_id` never comes from model args** or `callback_data` — always from the Telegram update.
 
-## Cómo añadir un recordatorio
+## How to add a reminder
 
-Los recordatorios se crean:
-- **Automáticamente** por la IA: el modelo llama la tool `create_reminder`
-- **Por comando**: `/recordar <texto>` → `parse_reminder_datetime()` extrae fecha/mensaje/recurrencia
+Reminders are created:
+- **Automatically** by the AI: the model calls the `create_reminder` tool
+- **By command**: `/recordar <text>` → `parse_reminder_datetime()` extracts date/message/recurrence
 
-La persistencia vive en `bot/reminders.py` (SQLite). El scheduler está en `bot/bot.py`.
+Persistence lives in `bot/reminders.py` (SQLite). The scheduler is in `bot/bot.py`.
 
-**Gestión**: los recordatorios se pueden editar/posponer/cancelar de tres formas:
-- **Por conversación**: tools de IA `list_reminders`, `cancel_reminder`, `edit_reminder`, `reschedule_reminder`, `postpone_reminder` (`bot/tools.py`)
-- **Por comandos**: `/recordatorios` (lista con botones inline), `/editarrecordatorio`, `/posponerrecordatorio`, `/reprogramarrecordatorio`, `/cancelarrecordatorio` (`bot/handlers.py`, registrados en `bot/bot.py`)
-- **Botones inline**: el `CallbackQueryHandler` `reminder_callback` (patrón `^remind_(cancel|postpone):\d+$`) maneja los taps
+**Management**: reminders can be edited/postponed/cancelled in three ways:
+- **By conversation**: AI tools `list_reminders`, `cancel_reminder`, `edit_reminder`, `reschedule_reminder`, `postpone_reminder` (`bot/tools.py`)
+- **By commands**: `/recordatorios` (list with inline buttons), `/editarrecordatorio`, `/posponerrecordatorio`, `/reprogramarrecordatorio`, `/cancelarrecordatorio` (`bot/handlers.py`, registered in `bot/bot.py`)
+- **Inline buttons**: the `CallbackQueryHandler` `reminder_callback` (pattern `^remind_(cancel|postpone):\d+$`) handles the taps
 
-**Entrega con reintentos**: `check_due_reminders` (`bot/handlers.py`) reintenta envíos fallidos con backoff exponencial definido en `bot/reminders.py` (`retry_delay`, `schedule_retry`, `reset_retry`): 10s, 20s, 40s... hasta un máximo de 8h. Al editar un recordatorio (texto, fecha o posponer) se resetea el estado de reintento.
+**Delivery with retries**: `check_due_reminders` (`bot/handlers.py`) retries failed sends with exponential backoff defined in `bot/reminders.py` (`retry_delay`, `schedule_retry`, `reset_retry`): 10s, 20s, 40s... up to a maximum of 8h. Editing a reminder (text, date, or postpone) resets the retry state.
 
-## Cómo funciona la memoria (bitácora)
+## How memory works (journal)
 
-La memoria a largo plazo es una **bitácora por tenant** (`user_id` o `group_id`): SQLite (`memory.db`) guarda los **metadatos** (días y resúmenes) y el contenido legible vive en Markdown bajo `DATA_DIR/memory/{user_id}/` o `memory/group_-xxx/` (`raw/` = captura cruda del día, `days/` = compactos diarios, `summaries/{weekly,quarterly,yearly}/` = resúmenes jerárquicos). Mismo patrón SQLite+MD que `projects.py`, con la misma filosofía defensiva:
+Long-term memory is a **per-tenant journal** (`user_id` or `group_id`): SQLite (`memory.db`) stores the **metadata** (days and summaries) and the readable content lives in Markdown under `DATA_DIR/memory/{user_id}/` or `memory/group_-xxx/` (`raw/` = raw daily capture, `days/` = daily compact, `summaries/{weekly,quarterly,yearly}/` = hierarchical summaries). Same SQLite+MD pattern as `projects.py`, with the same defensive philosophy:
 
-1. **Aislamiento por `user_id`/`group_id`** — cada tenant tiene su carpeta `memory/{user_id}/` o `memory/group_-xxx/` y filas con `CHECK((user_id IS NOT NULL AND group_id IS NULL) OR ...)` + índices parciales; el `user_id`/`group_id` siempre se inyecta desde el update de Telegram (`execute_tool(name, args, user_id, _group_id)`), nunca de los args del modelo. La bitácora de grupo es **compartida y firmada `@usuario`**.
-2. **Path traversal** — `_validate_day` / `_validate_summary_period` solo admiten el formato exacto del periodo (`YYYY-MM-DD`, `YYYY-Www`, `YYYY-Q#`, `YYYY`) y `_safe_under_memory` / `_safe_under_memory_group` resuelven cada ruta exigiéndole que quede dentro de `MEMORY_DIR` **y** dentro de la carpeta del tenant (doble guarda, igual que `_remove_project_dir` con `is_relative_to`). Si añades una función nueva que construya rutas de memoria, pásala por esas guardas.
-3. **Una conexión por operación** con WAL y schema idempotente (`CREATE TABLE IF NOT EXISTS`), como el resto de módulos.
-4. **Consistencia de resúmenes** — guardar un resumen de un nivel finaliza cualquier otro `current` del mismo nivel: siempre hay exactamente un `current` por nivel (el periodo en curso); los cerrados quedan `finalized` y navegables.
+1. **Isolation by `user_id`/`group_id`** — each tenant has its folder `memory/{user_id}/` or `memory/group_-xxx/` and rows with `CHECK((user_id IS NOT NULL AND group_id IS NULL) OR ...)` + partial indexes; `user_id`/`group_id` is always injected from the Telegram update (`execute_tool(name, args, user_id, _group_id)`), never from model args. The group journal is **shared and signed `@user`**.
+2. **Path traversal** — `_validate_day` / `_validate_summary_period` only accept the exact period format (`YYYY-MM-DD`, `YYYY-Www`, `YYYY-Q#`, `YYYY`) and `_safe_under_memory` / `_safe_under_memory_group` resolve each path requiring it to stay within `MEMORY_DIR` **and** within the tenant's folder (double guard, same as `_remove_project_dir` with `is_relative_to`). If you add a new function that builds memory paths, run it through those guards.
+3. **One connection per operation** with WAL and idempotent schema (`CREATE TABLE IF NOT EXISTS`), like the rest of the modules.
+4. **Summary consistency** — saving a summary at a given level finalizes any other `current` at the same level: there's always exactly one `current` per level (the current period); closed ones become `finalized` and navigable.
 
-**Tools de memoria y sus contratos** (todas devuelven JSON string; definidas en `bot/tools.py`, lógica en `bot/memory.py`/`bot/summarizer.py`):
+**Memory tools and their contracts** (all return JSON string; defined in `bot/tools.py`, logic in `bot/memory.py`/`bot/summarizer.py`):
 
-| Tool | Contrato |
+| Tool | Contract |
 |------|----------|
-| `journal_append(content, topic)` | Guarda en la bitácora del día (`raw/YYYY-MM-DD.md`) con prefijo `[topic]` opcional; topic desconocido se descarta (validación suave); devuelve `{ok, day, entry_count, word_count}` |
-| `memory_read(period, level=auto)` | Lee un día/resumen concreto; `auto` deduce el nivel del formato del periodo; día → compacto diario preferido, raw como fallback; devuelve `{ok, level, period, content}` (o `note` si no hay nada) |
-| `memory_recall(query, date_from?, date_to?)` | Búsqueda top-down: puntúa los resúmenes anual→trimestre→semana (1 mejor por nivel, con `pointer` a los hijos); si ninguno coincide, cae a los días crudos del rango (top 3, ventana por defecto 60 días); devuelve `{ok, matches, hint/note}` |
-| `memory_insights(days=7)` | Últimos `days` días crudos + resumen de la semana en curso; alimenta preguntas de hábitos y el motor proactivo; devuelve `{ok, days, week, week_summary}` |
-| `set_checkin_time(period, time)` | Ajusta las horas de check-in del usuario en `user_proactive_settings` (tabla en `projects.db`): `period` ∈ `morning`/`evening`, `time` en `HH:MM` (24h); valida y devuelve `{ok, period, time, morning, evening}` o un error en español (**solo privado**; bloqueado en grupo) |
+| `journal_append(content, topic)` | Saves to the day's journal (`raw/YYYY-MM-DD.md`) with optional `[topic]` prefix; unknown topic is discarded (soft validation); returns `{ok, day, entry_count, word_count}` |
+| `memory_read(period, level=auto)` | Reads a specific day/summary; `auto` deduces the level from the period format; day → daily compact preferred, raw as fallback; returns `{ok, level, period, content}` (or `note` if nothing found) |
+| `memory_recall(query, date_from?, date_to?)` | Top-down search: scores summaries year→quarter→week (1 best per level, with `pointer` to children); if none match, falls back to raw days in the range (top 3, default window 60 days); returns `{ok, matches, hint/note}` |
+| `memory_insights(days=7)` | Last `days` raw days + current week summary; feeds habit questions and the proactive engine; returns `{ok, days, week, week_summary}` |
+| `set_checkin_time(period, time)` | Adjusts the user's check-in times in `user_proactive_settings` (table in `projects.db`): `period` ∈ `morning`/`evening`, `time` in `HH:MM` (24h); validates and returns `{ok, period, time, morning, evening}` or an error in Spanish (**private only**; blocked in groups) |
 
-**Generación de resúmenes**: la compacción nocturna, el semanal, el trimestral y el anual corren como jobs en `bot/bot.py` → `bot/proactive.py` y son **escáneres de catch-up**: cada vez que corren aseguran *todo* lo que falte en su ventana de recuperación (últimos 3 días, últimas 8 semanas, últimos 4 trimestres, año actual + anterior), de modo que si el server estuvo apagado cuando cerraba un periodo, el siguiente arranque se pone al día solo (sin guardas de calendario: trimestral/anual corren a diario y son no-op cuando no falta nada). La **generación perezosa** (`summarizer.ensure_summary`) complementa el catch-up: regenera bajo demanda si el recall no encuentra, es idempotente y no llama al modelo para periodos vacíos, así que el costo estable es ~0. El motor proactivo (`bot/proactive.py`) genera check-ins con el modelo de chat: `run_checkins` (job periódico cada 15 min) resuelve por usuario su ventana — horas propias en `user_proactive_settings` o los defaults `PROACTIVE_MORNING_TIME`/`PROACTIVE_EVENING_TIME` —, respeta los marcadores `morning_sent_at`/`evening_sent_at` (una ventana por día) y `PROACTIVE_MAX_DAILY` (tope diario en `proactive_log`), y entrega best-effort con backoff.
+**Summary generation**: nightly compaction, weekly, quarterly, and yearly run as jobs in `bot/bot.py` → `bot/proactive.py` and are **catch-up scanners**: each time they run they ensure *everything* missing in their recovery window (last 3 days, last 8 weeks, last 4 quarters, current + previous year), so if the server was down when a period closed, the next startup catches up automatically (no calendar guards: quarterly/yearly run daily and are no-op when nothing is missing). **Lazy generation** (`summarizer.ensure_summary`) complements catch-up: regenerates on demand if recall doesn't find anything, is idempotent and doesn't call the model for empty periods, so the steady-state cost is ~0. The proactive engine (`bot/proactive.py`) generates check-ins with the chat model: `run_checkins` (periodic job every 15 min) resolves each user's window — their own times in `user_proactive_settings` or the defaults `PROACTIVE_MORNING_TIME`/`PROACTIVE_EVENING_TIME` —, respects the `morning_sent_at`/`evening_sent_at` markers (one window per day) and `PROACTIVE_MAX_DAILY` (daily cap in `proactive_log`), and delivers best-effort with backoff.
 
-> ⛔ **Regla de oro (recordatorio)**: la memoria es **dato de tenant** (`DATA_DIR/memory/{user_id}/` o `group_-xxx/`), no documentación del proyecto. Las tools de memoria **jamás** leen archivos del proyecto (AGENTS.md, README, docs/…) — su único alcance es la carpeta de memoria del tenant que habla. No añadas nunca una tool que lea archivos del proyecto para "enriquecer" la memoria.
+> ⛔ **Golden rule (reminder)**: memory is **tenant data** (`DATA_DIR/memory/{user_id}/` or `group_-xxx/`), not project documentation. Memory tools **never** read project files (AGENTS.md, README, docs/…) — their only scope is the talking tenant's memory folder. Never add a tool that reads project files to "enrich" memory.
 
-> El `SYSTEM_PROMPT` por defecto (`bot/config.py`) ya incluye las instrucciones de memoria y proactividad (cuándo usar `journal_append`, `memory_recall`, `memory_read`, `memory_insights`, `set_checkin_time` y cómo responder a los check-ins). Si el `.env` del VPS define un `SYSTEM_PROMPT` viejo, ese texto **anula** el default y desactiva esas reglas: edita a mano `~/telegram-bot/.env` en el servidor y borra/actualiza la línea `SYSTEM_PROMPT` (los deploys no tocan ese archivo).
+> The default `SYSTEM_PROMPT` (`bot/config.py`) already includes memory and proactivity instructions (when to use `journal_append`, `memory_recall`, `memory_read`, `memory_insights`, `set_checkin_time` and how to respond to check-ins). If the VPS's `.env` defines an old `SYSTEM_PROMPT`, that text **overrides** the default and disables those rules: manually edit `~/telegram-bot/.env` on the server and delete/update the `SYSTEM_PROMPT` line (deploys don't touch that file).
 
-## Cómo añadir un nuevo proveedor de IA
+## How to add a new AI provider
 
-1. Añadir las variables de entorno en `bot/config.py` (`Settings`).
-2. Crear el builder del cliente en `bot/ai_client.py` (patrón `build_client_for_provider`).
-3. Añadir la opción en la validación de `load_settings()`.
+1. Add the environment variables in `bot/config.py` (`Settings`).
+2. Create the client builder in `bot/ai_client.py` (`build_client_for_provider` pattern).
+3. Add the option in the `load_settings()` validation.
 
-> El proveedor y el modelo son **fijos por configuración** (`.env`) y no se
-> cambian desde el chat: no hay comando ni tool para ello (ver `bot/handlers.py`).
+> The provider and model are **fixed by configuration** (`.env`) and are not
+> changed from chat: there's no command or tool for that (see `bot/handlers.py`).
 
 ## Testing
 
-### Suite automatizada (pytest)
+### Automated suite (pytest)
 
-Hay una suite de tests en `tests/` (unitarios + integración con objetos falsos de Telegram, sin red):
+There's a test suite in `tests/` (unit + integration with fake Telegram objects, no network):
 
 ```bash
-# 1) Instalar dependencias de test (solo una vez por .venv)
+# 1) Install test dependencies (only once per .venv)
 .venv/bin/pip install -r requirements-dev.txt
 
-# 2) Ejecutar los tests con cobertura
+# 2) Run tests with coverage
 .venv/bin/python -m pytest --cov=bot
 ```
 
-Si ya tienes el entorno virtual activado (`source .venv/bin/activate`), basta con `python -m pytest --cov=bot`.
+If you already have the virtual environment activated (`source .venv/bin/activate`), just `python -m pytest --cov=bot` is enough.
 
-- `--cov=bot` mide qué porcentaje del código del paquete `bot/` fue ejecutado por los tests y muestra un reporte por módulo (ej. `access 100%`, `handlers 46%`). Sin el flag, pytest solo corre los tests.
-- En CI se usa `pytest --cov=bot --cov-fail-under=80`: si la cobertura baja del 80%, el workflow falla y bloquea el deploy.
-- Corre en CI en cada push (job `test` del workflow).
-- Todos los externos (httpx, ddgs, IA, Telegram) están mockeados — no requiere red ni tokens.
-- Los tests son deterministas y aislados (BD SQLite en `tmp_path` por test).
+- `--cov=bot` measures what percentage of the `bot/` package code was executed by the tests and shows a per-module report (e.g. `access 100%`, `handlers 46%`). Without the flag, pytest only runs the tests.
+- CI uses `pytest --cov=bot --cov-fail-under=80`: if coverage drops below 80%, the workflow fails and blocks the deploy.
+- Runs in CI on every push (`test` job in the workflow).
+- All externals (httpx, ddgs, AI, Telegram) are mocked — no network or tokens required.
+- Tests are deterministic and isolated (SQLite DB in `tmp_path` per test).
 
-### Smoke test del wiring del bot (`bot/bot.py`)
+### Bot wiring smoke test (`bot/bot.py`)
 
-> **Implementado** en `tests/test_bot.py` (7 tests).
+> **Implemented** in `tests/test_bot.py` (7 tests).
 
-`bot/bot.py` (`create_application`) registra ~25 handlers y 6 jobs programados y es el único punto crítico del arranque: un typo en el nombre de un handler o un job mal registrado rompe el bot al arrancar. El smoke test llama `create_application()` con settings de prueba (sin red ni tokens) y verifica:
+`bot/bot.py` (`create_application`) registers ~25 handlers and 6 scheduled jobs and is the single critical startup point: a typo in a handler name or a misregistered job breaks the bot at startup. The smoke test calls `create_application()` with test settings (no network or tokens) and verifies:
 
-- Que existan los `CommandHandler` / `MessageHandler` / `CallbackQueryHandler` esperados (comandos y patrones de callback correctos).
-- Que `bot_data["settings"]`, `bot_data["provider"]` y `bot_data["ai_client"]` estén poblados.
-- Que los jobs estén en la job queue con nombres/intervalos correctos (`prune_stale_chats` 600s, `check_due_reminders` 20s, `memory_*` a sus horas, `run_checkins` 900s).
-- Que con `MEMORY_ENABLED=false` / `PROACTIVE_ENABLED=false` los jobs correspondientes NO se registren (gates de configuración).
+- That the expected `CommandHandler` / `MessageHandler` / `CallbackQueryHandler` exist (correct commands and callback patterns).
+- That `bot_data["settings"]`, `bot_data["provider"]`, and `bot_data["ai_client"]` are populated.
+- That jobs are in the job queue with correct names/intervals (`prune_stale_chats` 600s, `check_due_reminders` 20s, `memory_*` at their times, `run_checkins` 900s).
+- That with `MEMORY_ENABLED=false` / `PROACTIVE_ENABLED=false` the corresponding jobs are NOT registered (configuration gates).
 
-Gracias a este test, `bot/bot.py` pasó de ~34% a 100% de cobertura.
+Thanks to this test, `bot/bot.py` went from ~34% to 100% coverage.
 
-### Pruebas manuales end-to-end
+### Manual end-to-end tests
 
-Para validar el flujo completo real (Telegram + IA + tools), prueba directamente contra el bot de desarrollo:
+To validate the full real flow (Telegram + AI + tools), test directly against the development bot:
 
-1. Levanta el bot: `docker compose up -d --build`
-2. Envía mensajes reales desde tu cuenta autorizada: chat normal, `/dolar`, `/proyectos`, `/nuevoproyecto`, `/recordar`, `/recordatorios`, notas de voz, `/imagina`
-3. Verifica respuestas y revisa logs: `docker compose logs -f`
+1. Start the bot: `docker compose up -d --build`
+2. Send real messages from your authorized account: normal chat, `/dolar`, `/proyectos`, `/nuevoproyecto`, `/recordar`, `/recordatorios`, voice notes, `/imagina`
+3. Verify responses and review logs: `docker compose logs -f`
 
-> No hay pruebas E2E automatizadas con un bot cliente simulado — las pruebas manuales directas son la forma soportada de validar el flujo real.
+> There are no automated E2E tests with a simulated client bot — direct manual tests are the supported way to validate the real flow.
 
-## Deploy a producción
+## Deploy to production
 
 ```bash
 git add .
-git commit -m "feat: mi cambio"
-git push origin main   # ← pedir aprobación del usuario antes
+git commit -m "feat: my change"
+git push origin main   # ← ask for user approval before
 ```
 
-El CI/CD despliega automáticamente al VPS. **Nunca hacer push sin aprobación explícita del usuario.**
+CI/CD automatically deploys to the VPS. **Never push without explicit user approval.**
 
-## Checklist antes de un commit
+## Checklist before a commit
 
-- [ ] Sin secrets ni datos de usuario (revisar `git status` / `git diff`)
-- [ ] Conventional commit en inglés
-- [ ] No se modificó `README.md` ni `docs/` accidentalmente con contenido del bot
-- [ ] Si añadiste una tool: devuelve JSON, no lee archivos del proyecto
-- [ ] Si tocaste memoria: las tools solo operan en `DATA_DIR/memory/{user_id}/`; no documentes comandos nuevos (la bitácora es 100% lenguaje natural)
-- [ ] La documentación de desarrollo no se copió al contenedor (`.dockerignore` intacto)
+- [ ] No secrets or user data (check `git status` / `git diff`)
+- [ ] Conventional commit in English
+- [ ] `README.md` or `docs/` not accidentally modified with bot content
+- [ ] If you added a tool: it returns JSON, doesn't read project files
+- [ ] If you touched memory: tools only operate in `DATA_DIR/memory/{user_id}/`; don't document new commands (the journal is 100% natural language)
+- [ ] Development docs were not copied to the container (`.dockerignore` intact)

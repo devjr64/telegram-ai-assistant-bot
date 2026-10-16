@@ -1,29 +1,29 @@
 # Fix: Group Project Collaboration
 
-## Problema
-Cuando un usuario crea un proyecto en grupo, los otros miembros del grupo NO lo ven en su chat privado porque no se les añade como colaboradores.
+## Problem
+When a user creates a group project, other group members do NOT see it in their private chat because they are not added as collaborators.
 
-## Causa Raíz
-`_handle_create_project` llama `create_project()` directamente en lugar de `create_group_project()` que añade automáticamente a los miembros del grupo.
+## Root Cause
+`_handle_create_project` calls `create_project()` directly instead of `create_group_project()` which automatically adds group members.
 
-## Cambios Realizados
+## Changes Made
 
 ### 1. `bot/tools.py` — `_handle_create_project`
-Cuando `_group_id` esté presente, usa `create_group_project` en lugar de `create_project`.
+When `_group_id` is present, use `create_group_project` instead of `create_project`.
 
 ### 2. `bot/projects.py` — `add_group_member`
-Cuando un nuevo usuario se une al grupo, se le añade como colaborador a todos los proyectos existentes del grupo.
+When a new user joins the group, they are added as a collaborator to all existing group projects.
 
 ### 3. `bot/projects.py` — `list_group_projects_for_user`
-Nueva función que retorna todos los proyectos de grupo donde el usuario es miembro o dueño.
+New function that returns all group projects where the user is a member or owner.
 
 ### 4. `bot/tools.py` — `_list_visible_projects`
-Ahora incluye proyectos de grupo en la lista visible del usuario en chat privado.
+Now includes group projects in the user's visible list in private chat.
 
-## Nota para Futuro
-La eliminación de colaboradores de proyectos de grupo solo se hace desde chat privado con `/quitaracceso`. No hay necesidad de añadir esta funcionalidad en el grupo.
+## Note for Future
+Removing collaborators from group projects is only done from private chat with `/quitaracceso`. There is no need to add this functionality in the group.
 
-## Verificación
-- @usuario_a crea proyecto en grupo
-- @usuario_b debe verlo en su chat privado
-- @usuario_b debe poder editarlo
+## Verification
+- @usuario_a creates project in group
+- @usuario_b should see it in their private chat
+- @usuario_b should be able to edit it

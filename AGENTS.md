@@ -1,162 +1,162 @@
 # AGENTS.md — Telegram AI Bot (OpenCode Go)
 
-Instrucciones para el agente (opencode / OpenAgents) que **desarrolla y mantiene** este proyecto.
-Este archivo es para el programador humano y el agente de desarrollo. **NO es para el bot de Telegram.**
+Instructions for the agent (opencode / OpenAgents) that **develops and maintains** this project.
+This file is for the human developer and the development agent. **It is NOT for the Telegram bot.**
 
 ---
 
-## ⛔ Regla de oro: separación de mundos (LEER PRIMERO)
+## ⛔ Golden rule: separation of worlds (READ FIRST)
 
-Este proyecto usa el mismo servicio "OpenCode Go" para **dos fines completamente distintos**:
+This project uses the same "OpenCode Go" service for **two completely different purposes**:
 
-| Mundo | Quién lo lee | Qué contiene |
+| World | Who reads it | What it contains |
 |-------|-------------|--------------|
-| **Desarrollo** | Tú + opencode (agente que programa) | `AGENTS.md`, `README.md`, `docs/`, `.opencode/context/` |
-| **Bot runtime** | Solo el bot en Docker | `SYSTEM_PROMPT` (en `.env`), tools, y datos de usuario (`DATA_DIR/projects/*.md`, `chat_history.db`, `projects.db`, `memory.db`, `memory/`) |
+| **Development** | You + opencode (coding agent) | `AGENTS.md`, `README.md`, `docs/`, `.opencode/context/` |
+| **Bot runtime** | Only the bot in Docker | `SYSTEM_PROMPT` (in `.env`), tools, and user data (`DATA_DIR/projects/*.md`, `chat_history.db`, `projects.db`, `memory.db`, `memory/`) |
 
-### Reglas absolutas
+### Absolute rules
 
-1. **El bot de Telegram NUNCA debe leer ni interpretar la documentación del proyecto** (`AGENTS.md`, `README.md`, `docs/`, `.opencode/`).
-2. **NUNCA añadas una tool de lectura de archivos al bot** (ej. `read_file`, `list_directory`). Las tools del bot están cerradas y limitadas a: proyectos del usuario, recordatorios, búsqueda web, tasa del dólar, generación de imágenes, la bitácora/memoria del usuario (journal_append, memory_read, memory_recall, memory_insights, set_checkin_time) y nada más.
-3. **NUNCA incluyas contenido de `AGENTS.md`, `README.md` o `docs/` en el `SYSTEM_PROMPT` o en el contexto que se envía al modelo del bot.**
-4. La documentación de desarrollo vive en la raíz/`docs/` y **jamás se copia al contenedor Docker** (ver `.dockerignore`) ni al VPS (ver `deploy.yml`).
-5. El bot solo persiste datos de usuario en `DATA_DIR` (por defecto `/app/data` en Docker): `projects.db`, `chat_history.db`, `projects/`, `media_usage.db`, `memory.db`, `memory/` (bitácora por usuario) y `entities.db` (entidades tracking). Nada más.
+1. **The Telegram bot must NEVER read or interpret project documentation** (`AGENTS.md`, `README.md`, `docs/`, `.opencode/`).
+2. **NEVER add file reading tools to the bot** (e.g., `read_file`, `list_directory`). Bot tools are closed and limited to: user projects, reminders, web search, dollar rate, image generation, user journal/memory (journal_append, memory_read, memory_recall, memory_insights, set_checkin_time) and nothing else.
+3. **NEVER include content from `AGENTS.md`, `README.md` or `docs/` in the `SYSTEM_PROMPT` or in the context sent to the bot's model.**
+4. Development documentation lives in root/`docs/` and **is never copied to the Docker container** (see `.dockerignore`) nor to the VPS (see `deploy.yml`).
+5. The bot only persists user data in `DATA_DIR` (default `/app/data` in Docker): `projects.db`, `chat_history.db`, `projects/`, `media_usage.db`, `memory.db`, `memory/` (per-user journal) and `entities.db` (entity tracking). Nothing else.
 
-> Si una tarea de desarrollo requiere que el bot acceda a algo del proyecto, **detente y consulta con el usuario primero**.
+> If a development task requires the bot to access something from the project, **stop and consult the user first**.
 
 ---
 
-## Proyecto
+## Project
 
-Bot de Telegram con IA para uso personal/familiar (Venezuela). Conversa en español vía OpenCode Go API, gestiona proyectos con memoria a largo plazo (SQLite + Markdown), recordatorios (incluidos recurrentes), búsqueda web, tasa del dólar y medios (notas de voz, análisis de fotos y generación de imágenes con Gemini).
+AI-powered Telegram bot for personal/family use (Venezuela). Converses in Spanish via OpenCode Go API, manages projects with long-term memory (SQLite + Markdown), reminders (including recurring), web search, dollar rate and media (voice notes, photo analysis and image generation with Gemini).
 
-- **Producción:** [@<bot-produccion>](https://t.me/bot-produccion-ejemplo)
-- **Pruebas:** [@<bot-pruebas>](https://t.me/bot-pruebas-ejemplo) — solo se usa para pruebas locales, NUNCA para producción
-- **Repo GitHub:** `github.com/<usuario>/<repo>` (privado)
-- **Deploy:** automático vía GitHub Actions al VPS (Docker)
+- **Production:** [@<bot-produccion>](https://t.me/bot-produccion-ejemplo)
+- **Testing:** [@<bot-pruebas>](https://t.me/bot-pruebas-ejemplo) — only used for local testing, NEVER for production
+- **GitHub repo:** `github.com/<usuario>/<repo>` (private)
+- **Deploy:** automatic via GitHub Actions to VPS (Docker)
 
-> ⚠️ **Regla de tokens**: el bot de producción (`@<bot-produccion>`) y el de pruebas (`@<bot-pruebas>`) usan tokens diferentes. **NUNCA** uses el token de producción para pruebas locales. El bot de pruebas NO corre 24/7 — solo se levanta cuando se hacen pruebas manuales.
+> ⚠️ **Token rule**: the production bot (`@<bot-produccion>`) and testing bot (`@<bot-pruebas>`) use different tokens. **NEVER** use the production token for local testing. The testing bot does NOT run 24/7 — it's only started when manual testing is needed.
 
-## Arquitectura
+## Architecture
 
 ```
 main.py                      → entry point (Python 3.12, python-telegram-bot)
 bot/
-├── config.py                → Settings dataclass (variables .env, fail-secure)
-├── access.py                → control de acceso (solo AUTHORIZED_USERS)
-├── ai_client.py             → cliente OpenAI-compatible (opencode / gemini)
-├── handlers.py              → comandos + chat + loop de tools + handlers de grupo
-├── project_commands.py      → comandos de proyectos (/proyectos, /nuevoproyecto,
+├── config.py                → Settings dataclass (.env variables, fail-secure)
+├── access.py                → access control (only AUTHORIZED_USERS)
+├── ai_client.py             → OpenAI-compatible client (opencode / gemini)
+├── handlers.py              → commands + chat + tool loop + group handlers
+├── project_commands.py      → project commands (/proyectos, /nuevoproyecto,
 │                              /compartir, /quitaracceso…)
-│                              Scope filters: todos, mios, dueños, compartidos, invitado
-│                              Notificaciones de cambios en proyectos de grupo
-├── projects.py              → CRUD proyectos SQLite + Markdown + compartición
-│                              + soporte de grupos (ACL: project_members, users,
+│                              Scope filters: all, mine, owners, shared, guest
+│                              Notifications for group project changes
+├── projects.py              → SQLite project CRUD + Markdown + sharing
+│                              + group support (ACL: project_members, users,
 │                              group_members, get_project_for_user, get_shared_projects_in_group)
-├── reminders.py             → recordatorios SQLite (one-time + recurrentes)
-├── history.py               → historial de chat SQLite (PERMANENTE, sin pruning)
-├── tools.py                 → definiciones + ejecución de tools del modelo
-│                              (GROUP_TOOLS, PRIVATE_ONLY_TOOLS para scope de grupo)
-│                              list_projects soporta scope: all, owned, shared_with_me, shared_by_me
-│                              Tools de grupo generan _notify metadata para notificaciones
-├── auto_journal.py          → auto-guardado de eventos y entidades (60min + 1 call, threshold 6)
-├── entities.py              → tracking de entidades (personas, lugares, casos, documentos)
-├── memory.py                → bitácora/journal (SQLite + Markdown, resúmenes jerárquicos)
-├── summarizer.py            → generación de resúmenes (daily, weekly, quarterly, yearly)
-├── proactive.py             → check-ins matutinos/vespertinos + jobs de resumen
-├── dolar.py                 → tasas dólar (BCV oficial + USDT Binance P2P)
-├── websearch.py             → búsqueda web DuckDuckGo (ddgs, sin API key)
-├── media.py                 → procesado de voz (ffmpeg) e imágenes
-├── media_usage.py           → límites diarios de generación de medios
-└── bot.py                   → wiring de python-telegram-bot (handlers privado + grupo)
+├── reminders.py             → SQLite reminders (one-time + recurring)
+├── history.py               → SQLite chat history (PERMANENT, no pruning)
+├── tools.py                 → tool definitions + model tool execution
+│                              (GROUP_TOOLS, PRIVATE_ONLY_TOOLS for group scope)
+│                              list_projects supports scope: all, owned, shared_with_me, shared_by_me
+│                              Group tools generate _notify metadata for notifications
+├── auto_journal.py          → auto-save events and entities (60min + 1 call, threshold 6)
+├── entities.py              → entity tracking (people, places, cases, documents)
+├── memory.py                → journal (SQLite + Markdown, hierarchical summaries)
+├── summarizer.py            → summary generation (daily, weekly, quarterly, yearly)
+├── proactive.py             → morning/evening check-ins + summary jobs
+├── dolar.py                 → dollar rates (official BCV + Binance P2P USDT)
+├── websearch.py             → DuckDuckGo web search (ddgs, no API key)
+├── media.py                 → voice processing (ffmpeg) and images
+├── media_usage.py           → daily media generation limits
+└── bot.py                   → python-telegram-bot wiring (private + group handlers)
 
 Dockerfile / docker-compose.yml
-.github/workflows/deploy.yml → CI/CD: rsync + docker compose en el VPS
+.github/workflows/deploy.yml → CI/CD: rsync + docker compose on VPS
 .env.example / .gitignore
 ```
 
-### Flujo de IA con herramientas (clave)
+### AI tool-calling flow (key)
 
-1. Usuario envía mensaje → el bot envía historial + definiciones de tools al modelo
-2. El modelo decide: responder directamente o llamar una tool
-3. Si llama una tool, `tools.py` la ejecuta y devuelve el resultado JSON al modelo
-4. El modelo produce la respuesta final en español
+1. User sends message → bot sends history + tool definitions to model
+2. Model decides: respond directly or call a tool
+3. If it calls a tool, `tools.py` executes it and returns JSON result to model
+4. Model produces final response in Spanish
 
-**Añadir una tool nueva**: definición en `TOOL_DEFINITIONS` (tools.py) + handler en `_dispatch()` + lógica en su módulo. Las tools son el ÚNICO puente entre el modelo y el sistema — mantenerlas limitadas y seguras.
+**Adding a new tool**: definition in `TOOL_DEFINITIONS` (tools.py) + handler in `_dispatch()` + logic in its module. Tools are the ONLY bridge between model and system — keep them limited and secure.
 
-### UX: lenguaje natural sobre comandos
+### UX: natural language over commands
 
-El objetivo final del bot es que el usuario interactúe por **chat natural** (lenguaje natural), no por comandos. El usuario final es personal/familiar, no técnico.
+The bot's ultimate goal is for the user to interact via **natural chat** (natural language), not commands. The end user is personal/family, not technical.
 
-- **Preferir siempre la interacción por chat** sobre los comandos (`/proyectos`, `/recordar`, etc.). Si se añade una función nueva, el objetivo es que funcione conversando, no exigiendo un comando.
-- Los comandos existen para: **testeo**, **implementación**, **decisiones técnicas** y **seguridad** (ej. botones de confirmación para acciones destructivas). Son una herramienta de desarrollo, no el objetivo de UX.
-- La seguridad no se relaja: el bot SIEMPRE debe llamar a una tool para realizar sus acciones. La diferencia es que el modelo decide cuándo llamar la tool a partir del lenguaje natural del usuario, no porque el usuario escriba un comando.
-- Al diseñar una feature nueva, pensar primero: *"¿cómo lo pediría el usuario en una conversación?"* y hacer que el modelo lo resuelva vía tools. El comando equivalente es secundario u opcional.
+- **Always prefer chat interaction** over commands (`/proyectos`, `/recordar`, etc.). When adding a new feature, the goal is to make it work through conversation, not requiring a command.
+- Commands exist for: **testing**, **implementation**, **technical decisions** and **security** (e.g., confirmation buttons for destructive actions). They're a development tool, not the UX goal.
+- Security is not relaxed: the bot MUST always call a tool to perform actions. The difference is that the model decides when to call the tool based on the user's natural language, not because the user typed a command.
+- When designing a new feature, think first: *"how would the user ask for this in a conversation?"* and make the model resolve it via tools. The equivalent command is secondary or optional.
 
-### Compartición de proyectos (ACL) — reglas de seguridad
+### Project sharing (ACL) — security rules
 
-Los proyectos pueden compartirse con usuarios autorizados. **Reglas no negociables** (ver `docs/development.md` → "Compartición de proyectos (ACL)"):
+Projects can be shared with authorized users. **Non-negotiable rules** (see `docs/development.md` → "Project sharing (ACL)"):
 
-1. **Toda lectura/escritura de proyectos pasa por `get_project_for_user(user_id, slug)`** — dueño o miembro; jamás consultar por `user_id` ajeno ni permitir filtrar proyectos por ID.
-2. **Solo el dueño invita/remueve** — `is_owner` se verifica en la capa de UI **y** dentro de `add_project_member`/`remove_project_member`.
-3. **Auto-invitación rechazada** — un usuario no puede añadirse solo a un proyecto ajeno.
-4. **Rutas de archivos SIEMPRE con el owner** — el invitado lee/escribe en `projects/{owner_id}/{slug}/`.
-5. **El `user_id` siempre se inyecta desde el update de Telegram** en `execute_tool(name, args, user_id)` — nunca desde los args del modelo.
-6. **Regla de 3 urgentes contra el dueño** — incluso cuando edita un invitado.
+1. **All project read/write goes through `get_project_for_user(user_id, slug)`** — owner or member; never query by another's `user_id` or allow filtering projects by ID.
+2. **Only owner invites/removes** — `is_owner` is verified in the UI layer **and** inside `add_project_member`/`remove_project_member`.
+3. **Self-invitation rejected** — a user cannot add themselves to another's project.
+4. **File paths ALWAYS with owner** — guest reads/writes in `projects/{owner_id}/{slug}/`.
+5. **`user_id` always injected from Telegram update** in `execute_tool(name, args, user_id)` — never from model args.
+6. **3 urgent rule against owner** — even when edited by a guest.
 
-### Soporte de grupos — reglas de seguridad (paridad v1 — ver `specs/group-parity.md`)
+### Group support — security rules (parity v1 — see `specs/group-parity.md`)
 
-Los grupos de Telegram permiten colaboración completa con aislamiento estricto por `chat_id`:
+Telegram groups allow full collaboration with strict isolation by `chat_id`:
 
-1. **Proyectos de grupo**: un proyecto con `group_id` es visible en ese grupo. Al crearlo en grupo, automáticamente se añaden todos los miembros como colaboradores.
-2. **Paridad en grupo**: `web_search`, `dolar_rate`, recordatorios y bitácora/memoria son **compartidos por grupo** (`group_id` tenant). Solo `generate_image` y `set_checkin_time` (y `share/unshare/delete/list_members`) quedan privados.
-3. **Recordatorios en grupo**: se crean con `group_id` y se **entregan en el grupo**; cualquier miembro puede ver/editar/borrar (`group_id` aislado, `created_by` registra autor). El comando `/recordar` y `list_reminders` etc. funcionan en grupo.
-4. **Bitácora en grupo**: `memory/group_-xxx/` compartida, entradas firmadas `@usuario` (`append_raw_entry(..., group_id, author_username)`), consultable vía `journal_append`/`memory_*` en grupo.
-5. **Notificaciones de grupo**: cuando cambia el estado, prioridad o se agrega una nota a un proyecto de grupo, se envía una notificación breve al grupo (best-effort, nunca rompe la operación).
-6. **Disolución de grupo**: si el bot es removido (`kicked/left`), se **borra todo** del grupo (`cleanup_group_data`: reminders, `days/summaries`, `memory/group_-xxx/`, `chat_history`, proyectos desasociados).
-7. **`group_members`**: tabla que registra qué usuarios han interactuado en cada grupo. Se usa al crear proyectos de grupo para auto-añadir miembros y para descubrir grupos en jobs.
+1. **Group projects**: a project with `group_id` is visible in that group. When created in a group, all members are automatically added as collaborators.
+2. **Group parity**: `web_search`, `dolar_rate`, reminders and journal/memory are **shared by group** (`group_id` tenant). Only `generate_image` and `set_checkin_time` (and `share/unshare/delete/list_members`) remain private.
+3. **Group reminders**: created with `group_id` and **delivered in the group**; any member can view/edit/delete (`group_id` isolated, `created_by` records author). The `/recordar` command and `list_reminders` etc. work in groups.
+4. **Group journal**: shared `memory/group_-xxx/`, entries signed `@user` (`append_raw_entry(..., group_id, author_username)`), queryable via `journal_append`/`memory_*` in group.
+5. **Group notifications**: when status, priority changes or a note is added to a group project, a brief notification is sent to the group (best-effort, never breaks operation).
+6. **Group dissolution**: if bot is removed (`kicked/left`), **everything** for the group is deleted (`cleanup_group_data`: reminders, `days/summaries`, `memory/group_-xxx/`, `chat_history`, disassociated projects).
+7. **`group_members`**: table recording which users have interacted in each group. Used when creating group projects to auto-add members and to discover groups in jobs.
 
-## Estándares de código
+## Code standards
 
-- **Python 3.12** con type hints en todas las firmas (`def foo(x: int) -> str:`)
-- **Async nativo** (`async def`, `await`) — nunca bloquear el event loop; tareas CPU/IO bloqueantes en `asyncio.to_thread`
-- **Docstrings** en los módulos y funciones públicas (explicar el *porqué*, no el *qué*)
-- **Errores**: manejo explícito en los bordes; las tools SIEMPRE devuelven JSON de string al modelo (`{"ok": ...}`), nunca excepciones crudas
-- **Logging** con `logging.getLogger(__name__)` (nunca `print`)
-- **SQLite**: una conexión por operación con `with closing(get_connection())`; schema idempotente (`CREATE TABLE IF NOT EXISTS`)
-- **Configuración** solo vía `Settings` (config.py) — nunca hardcodear valores sensibles
-- **Funciones pequeñas** (< ~50 líneas), composición sobre herencia, sin estado global mutable
-- **Ejecutar siempre en Docker** (`docker compose up -d --build`) — nunca `python main.py` directo
+- **Python 3.12** with type hints in all signatures (`def foo(x: int) -> str:`)
+- **Native async** (`async def`, `await`) — never block the event loop; blocking CPU/IO tasks in `asyncio.to_thread`
+- **Docstrings** in modules and public functions (explain *why*, not *what*)
+- **Errors**: explicit handling at boundaries; tools ALWAYS return string JSON to model (`{"ok": ...}`), never raw exceptions
+- **Logging** with `logging.getLogger(__name__)` (never `print`)
+- **SQLite**: one connection per operation with `with closing(get_connection())`; idempotent schema (`CREATE TABLE IF NOT EXISTS`)
+- **Configuration** only via `Settings` (config.py) — never hardcode sensitive values
+- **Small functions** (< ~50 lines), composition over inheritance, no mutable global state
+- **Always run in Docker** (`docker compose up -d --build`) — never `python main.py` directly
 
 ## Tests (pytest)
 
-La suite de tests vive en `tests/` (unitarios + integración con objetos falsos de Telegram, sin red). **Antes de commitear cambios de código, ejecutar la suite y confirmar que pasa:**
+The test suite lives in `tests/` (unit + integration with fake Telegram objects, no network). **Before committing code changes, run the suite and confirm it passes:**
 
 ```bash
-# Dependencias de test (solo una vez por .venv)
+# Test dependencies (only once per .venv)
 .venv/bin/pip install -r requirements-dev.txt
 
-# Ejecutar todos los tests con cobertura
+# Run all tests with coverage
 .venv/bin/python -m pytest --cov=bot
 ```
 
-- `--cov=bot` mide el % del código de `bot/` ejecutado por los tests (reporte por módulo).
-- En CI corre `pytest --cov=bot --cov-fail-under=80` — cobertura <80% bloquea el deploy.
-- Los tests NO requieren red ni tokens reales (todo mockeado) y usan BD SQLite en `tmp_path`.
-- Si añades una feature nueva, añade tests para ella (happy path + edge + error).
+- `--cov=bot` measures % of `bot/` code executed by tests (report per module).
+- CI runs `pytest --cov=bot --cov-fail-under=80` — coverage <80% blocks deploy.
+- Tests do NOT require network or real tokens (all mocked) and use SQLite DBs in `tmp_path`.
+- If you add a new feature, add tests for it (happy path + edge + error).
 
-## Seguridad
+## Security
 
-- **Nunca** committear `.env`, claves, tokens o `.private/` (ver `.gitignore`)
-- El bot es **fail-secure**: sin `AUTHORIZED_USERS` nadie accede
-- Contenedor **no-root** (`botuser`, UID 999), sin puertos expuestos (long-polling saliente)
-- Rate limiting (3s/mensaje/usuario) y contexto limitado (30 mensajes) protegen el presupuesto de Go
-- El `.env` del VPS jamás se toca en deploys (excluido del rsync)
-- El repo es privado en GitHub
+- **Never** commit `.env`, keys, tokens or `.private/` (see `.gitignore`)
+- Bot is **fail-secure**: without `AUTHORIZED_USERS` nobody gets in
+- Container is **non-root** (`botuser`, UID 999), no exposed ports (outbound long-polling)
+- Rate limiting (3s/message/user) and limited context (30 messages) protect Go budget
+- VPS `.env` is never touched in deploys (excluded from rsync)
+- Repo is private on GitHub
 
 ## Commits
 
-Conventional Commits, en inglés, descriptivos:
+Conventional Commits, in English, descriptive:
 
 ```
 feat: add new command
@@ -167,64 +167,64 @@ chore: bump dependency
 refactor: extract dolar module
 ```
 
-## Docker SIEMPRE (desarrollo y producción)
+## Docker ALWAYS (development and production)
 
-> ⛔ **Este proyecto se ejecuta SIEMPRE en Docker.** Nunca corras el bot directamente con `python main.py` en tu máquina.
+> ⛔ **This project ALWAYS runs in Docker.** Never run the bot directly with `python main.py` on your machine.
 
-- **Desarrollo/pruebas locales**: `docker compose up -d --build` (lee tu `.env` local, datos en el volumen `bot_data`). Es el mismo contenedor que corre en el VPS: lo que pruebas localmente es exactamente lo que se despliega.
-- **Producción**: mismo `docker compose up -d --build` en el VPS vía CI/CD.
-- Para ver logs: `docker compose logs -f`. Para reiniciar: `docker compose up -d --build`. Para limpiar volumen: `docker compose down -v && docker compose up -d --build`.
+- **Local development/testing**: `docker compose up -d --build` (reads your local `.env`, data in `bot_data` volume). It's the same container that runs on the VPS: what you test locally is exactly what gets deployed.
+- **Production**: same `docker compose up -d --build` on VPS via CI/CD.
+- To view logs: `docker compose logs -f`. To restart: `docker compose up -d --build`. To clean volume: `docker compose down -v && docker compose up -d --build`.
 
-### ⚠️ Tokens de Telegram: desarrollo ≠ producción
+### ⚠️ Telegram tokens: development ≠ production
 
-- Tu `.env` **local** usa un `BOT_TOKEN` de **pruebas** (bot creado con @BotFather solo para desarrollo).
-- El **VPS** tiene su propio `.env` con el `BOT_TOKEN` de **producción** (`@<bot-produccion>`). Ese `.env` del servidor **jamás se toca** desde aquí: los deploys no lo sincronizan (excluido del rsync).
-- **NUNCA** copies el `.env` de producción a local ni viceversa, y **nunca** uses el token de producción para pruebas locales — romperías el bot en vivo.
-- Los IDs en `AUTHORIZED_USERS` pueden diferir entre entornos: el bot de pruebas solo responde a los IDs listados en tu `.env` local.
+- Your **local** `.env` uses a **testing** `BOT_TOKEN` (bot created with @BotFather for development only).
+- The **VPS** has its own `.env` with the **production** `BOT_TOKEN` (`@<bot-produccion>`). That server `.env` is **never touched** from here: deploys don't sync it (excluded from rsync).
+- **NEVER** copy the production `.env` to local or vice versa, and **never** use the production token for local testing — you'd break the live bot.
+- IDs in `AUTHORIZED_USERS` may differ between environments: the testing bot only responds to IDs listed in your local `.env`.
 
-## Deploy (no push sin aprobación explícita del usuario)
+## Deploy (no push without explicit user approval)
 
-- `git push origin main` → GitHub Actions → rsync al VPS → `docker compose up -d --build`
-- **Antes de hacer push, pedir siempre aprobación explícita al usuario.**
-- El deploy NO lleva: `.env`, bases de datos, `.venv`, `.opencode/`, `AGENTS.md`, `docs/`, `projects/` (ver `.dockerignore` y `deploy.yml`)
+- `git push origin main` → GitHub Actions → rsync to VPS → `docker compose up -d --build`
+- **Before pushing, always ask for explicit user approval.**
+- Deploy does NOT include: `.env`, databases, `.venv`, `.opencode/`, `AGENTS.md`, `docs/`, `projects/` (see `.dockerignore` and `deploy.yml`)
 
-## Datos persistentes (volumen Docker `bot_data` → `/app/data`)
+## Persistent data (Docker volume `bot_data` → `/app/data`)
 
 ```
 /app/data/
-├── chat_history.db          ← historial de conversaciones (PERMANENTE, sin pruning, aislado por chat_id)
-├── projects.db              ← metadatos de proyectos (+ reminders con group_id + proactive_log)
-├── projects/{user_id}/{slug}/  ← contenido de proyectos (overview.md, notes/, context.json)
-├── media_usage.db           ← límites de medios
-├── memory.db                ← metadatos de la bitácora (días y resúmenes, con group_id)
-├── memory/{user_id}/        ← bitácora por usuario (raw/, days/, summaries/)
-├── memory/group_-xxx/       ← bitácora compartida por grupo (aislada, firmada @usuario)
-└── entities.db              ← entidades tracking (personas, lugares, casos, documentos)
+├── chat_history.db          ← conversation history (PERMANENT, no pruning, isolated by chat_id)
+├── projects.db              ← project metadata (+ reminders with group_id + proactive_log)
+├── projects/{user_id}/{slug}/  ← project content (overview.md, notes/, context.json)
+├── media_usage.db           ← media limits
+├── memory.db                ← journal metadata (days and summaries, with group_id)
+├── memory/{user_id}/        ← per-user journal (raw/, days/, summaries/)
+├── memory/group_-xxx/       ← group shared journal (isolated, signed @user)
+└── entities.db              ← entity tracking (people, places, cases, documents)
 ```
 
-Estos archivos son **datos de usuario del bot** — no confundir con la documentación del proyecto.
+These files are **bot user data** — don't confuse with project documentation.
 
-## Pruebas automatizadas con MCP de Telegram
+## Automated testing with Telegram MCP
 
-Las pruebas automatizadas con el MCP de Telegram **siempre** se hacen contra el bot de pruebas `@<bot-pruebas>`, **NUNCA** contra el de producción.
+Automated tests with Telegram MCP **always** run against the testing bot `@<bot-pruebas>`, **NEVER** against production.
 
-### Flujo de pruebas
+### Testing flow
 
-1. **Levantar el bot de pruebas**: `docker compose up -d --build` (usa el `BOT_TOKEN` de pruebas de tu `.env` local)
-2. **Ejecutar pruebas MCP**: usar el Telegram MCP para enviar mensajes al bot `@<bot-pruebas>`
-3. **Verificar respuestas**: revisar que el bot responde correctamente en privado y en grupos
-4. **Apagar el bot**: `docker compose down` (el bot de pruebas NO debe correr 24/7)
+1. **Start testing bot**: `docker compose up -d --build` (uses testing `BOT_TOKEN` from your local `.env`)
+2. **Run MCP tests**: use Telegram MCP to send messages to `@<bot-pruebas>` bot
+3. **Verify responses**: check that bot responds correctly in private and groups
+4. **Stop bot**: `docker compose down` (testing bot should NOT run 24/7)
 
-### Reglas de pruebas
+### Testing rules
 
-- **Siempre** usar el chat_id del bot de pruebas (`@<bot-pruebas>`), nunca el de producción
-- El bot de pruebas solo responde a los `AUTHORIZED_USERS` configurados en tu `.env` local
-- Después de las pruebas, **apagar el contenedor** — el bot de pruebas no debe estar corriendo permanentemente
-- Los datos de pruebas se guardan en el volumen Docker `bot_data` — se pueden limpiar con `docker compose down -v`
+- **Always** use the testing bot's chat_id (`@<bot-pruebas>`), never production
+- Testing bot only responds to `AUTHORIZED_USERS` configured in your local `.env`
+- After testing, **stop the container** — testing bot should not run permanently
+- Test data is stored in Docker volume `bot_data` — can be cleaned with `docker compose down -v`
 
-### IDs de referencia
+### Reference IDs
 
-| Bot | Username | Uso |
+| Bot | Username | Use |
 |-----|----------|-----|
-| Producción | `@<bot-produccion>` | Bot en vivo, 24/7 |
-| Pruebas | `@<bot-pruebas>` | Solo pruebas locales, bajo demanda |
+| Production | `@<bot-produccion>` | Live bot, 24/7 |
+| Testing | `@<bot-pruebas>` | Local testing only, on demand |

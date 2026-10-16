@@ -4,31 +4,31 @@
 ![Python](https://img.shields.io/badge/python-3.12-blue)
 ![License](https://img.shields.io/badge/license-MIT-green)
 
-Bot de Telegram con IA para uso personal y familiar (Venezuela 🇻🇪). Conversa en español, lleva registro de **proyectos** con memoria a largo plazo, y solo permite acceso a usuarios autorizados.
+AI-powered Telegram bot for personal and family use (Venezuela 🇻🇪). Converses in Spanish, tracks **projects** with long-term memory, and only allows access to authorized users.
 
-> 🤖 **Proyecto personal en producción 24/7** en un VPS (instancia privada).
+> 🤖 **Personal project running 24/7** on a VPS (private instance).
 
-## Características
+## Features
 
-- 🤖 **Chat con IA** — responde en español vía OpenCode Go (`mimo-v2.5` por defecto, económico)
-- 🎤 **Notas de voz** — las transcribe con Gemini (gratis) y responde; el transcript entra a la conversación normal
-- 🖼️ **Fotos** — las analiza con visión de Gemini y conversa sobre su contenido
-- 🎨 **`/imagina`** — genera imágenes con IA (Nano Banana de Gemini, gratis)
-- 🌐 **Búsqueda web** — consulta internet automáticamente cuando la respuesta requiere información actual (noticias, precios, datos recientes) y cita las fuentes
-- 💵 **Tasa del dólar** — con `/dolar` (o preguntando) obtienes la tasa oficial BCV y la paralela USDT (Binance P2P)
-- 📁 **Proyectos** — crea, busca, actualiza y da seguimiento a temas recurrentes (ej: "arreglar el carro")
-- 👥 **Grupos** — usa el bot en grupos de Telegram para proyectos compartidos (privacidad estricta)
-- 🔔 **Recordatorios** — pídele que te recuerde algo en el futuro, incluso **recurrentes** ("todos los lunes", "cada mes")
-- 🧠 **Memoria** — recuerda proyectos entre conversaciones usando SQLite + archivos Markdown
-- 📓 **Bitácora** — guarda tu día a día automáticamente y responde sobre tu pasado con resúmenes jerárquicos
-- 🔄 **Auto-journal** — revisa el historial cada 60 min (threshold 6, 1 call) y guarda eventos importantes sin que tengas que pedirlo
-- 🏷️ **Tracking de entidades** — registra personas, lugares, casos y documentos para dar seguimiento
-- ☀️ **Proactividad** — check-ins matutinos y vespertinos que te recuerdan pendientes y patrones de tu bitácora
-- 🔒 **Acceso restringido** — solo usuarios autorizados (fail-secure)
-- 🐳 **Docker** — mismo contenedor funciona en tu máquina local y en el VPS
-- 💾 **Persistencia** — datos guardados en volumen Docker, sobreviven reinicios y rebuilds
+- 🤖 **AI Chat** — responds in Spanish via OpenCode Go (`mimo-v2.5` by default, cost-effective)
+- 🎤 **Voice notes** — transcribes with Gemini (free) and responds; transcript enters normal conversation
+- 🖼️ **Photos** — analyzes with Gemini vision and converses about their content
+- 🎨 **`/imagina`** — generates images with AI (Nano Banana by Gemini, free)
+- 🌐 **Web search** — automatically searches the internet when answers require current info (news, prices, recent data) and cites sources
+- 💵 **Exchange rate** — with `/dolar` (or just asking) get the official BCV rate and parallel USDT rate (Binance P2P)
+- 📁 **Projects** — creates, searches, updates and tracks recurring topics (e.g., "fix the car")
+- 👥 **Groups** — use the bot in Telegram groups for shared projects (strict privacy)
+- 🔔 **Reminders** — ask it to remind you of something in the future, even **recurring** ("every Monday", "monthly")
+- 🧠 **Memory** — remembers projects across conversations using SQLite + Markdown files
+- 📓 **Journal** — automatically logs your day and answers about your past with hierarchical summaries
+- 🔄 **Auto-journal** — reviews history every 60 min (threshold 6, 1 call) and saves important events without being asked
+- 🏷️ **Entity tracking** — registers people, places, cases and documents for follow-up
+- ☀️ **Proactive** — morning and evening check-ins that remind you of pending tasks and patterns from your journal
+- 🔒 **Restricted access** — only authorized users (fail-secure)
+- 🐳 **Docker** — same container works on your local machine and on the VPS
+- 💾 **Persistence** — data stored in Docker volume, survives restarts and rebuilds
 
-## Arquitectura
+## Architecture
 
 ```
 ┌────────────────────────────────────────────┐
@@ -37,142 +37,142 @@ Bot de Telegram con IA para uso personal y familiar (Venezuela 🇻🇪). Conver
 │  main.py          → entry point            │
 │  bot/                                     │
 │  ├── config.py    → settings (.env)        │
-│  ├── access.py    → control de acceso      │
-│  ├── ai_client.py → cliente OpenCode Go    │
-│  ├── handlers.py  → comandos + chat + tools│
-│  ├── project_commands.py → comandos proy.  │
-│  ├── projects.py  → CRUD + compartir + .md │
-│  ├── reminders.py → recordatorios SQLite   │
-│  ├── history.py   → historial de chat      │
-│  ├── auto_journal.py → auto-guardado       │
-│  ├── entities.py  → tracking entidades     │
-│  ├── memory.py    → bitácora SQLite + .md  │
-│  ├── summarizer.py → resúmenes jerárquicos │
+│  ├── access.py    → access control         │
+│  ├── ai_client.py → OpenCode Go client     │
+│  ├── handlers.py  → commands + chat + tools│
+│  ├── project_commands.py → project cmds    │
+│  ├── projects.py  → CRUD + sharing + .md   │
+│  ├── reminders.py → SQLite reminders       │
+│  ├── history.py   → chat history           │
+│  ├── auto_journal.py → auto-save           │
+│  ├── entities.py  → entity tracking        │
+│  ├── memory.py    → journal SQLite + .md   │
+│  ├── summarizer.py → hierarchical summaries│
 │  ├── proactive.py → check-ins + jobs       │
-│  ├── tools.py     → definiciones de tools  │
-│  ├── dolar.py     → tasas dólar (BCV+USDT) │
-│  ├── websearch.py → búsqueda web (ddgs)    │
-│  ├── media.py     → descarga/convierte     │
-│  │                 voz y fotos (ffmpeg+PIL)│
-│  ├── media_usage.py → caps diarios media   │
-│  └── bot.py       → wiring de PTB          │
+│  ├── tools.py     → tool definitions       │
+│  ├── dolar.py     → exchange rates         │
+│  ├── websearch.py → web search (ddgs)      │
+│  ├── media.py     → download/convert       │
+│  │                 voice & photos (ffmpeg)  │
+│  ├── media_usage.py → daily media limits   │
+│  └── bot.py       → PTB wiring             │
 │                                            │
 │  Dockerfile / docker-compose.yml           │
 │  .env.example / .gitignore                 │
-│  telegram-bot.service (systemd alternativo)│
+│  telegram-bot.service (systemd alt)        │
 └────────────────────────────────────────────┘
 ```
 
-### Cómo funciona el flujo de IA con herramientas
+### How the AI tool-calling flow works
 
-1. El usuario envía un mensaje
-2. El bot envía el historial al modelo (con definiciones de herramientas)
-3. El modelo decide: responder directamente **o** llamar una herramienta
-4. Si llama una herramienta, el bot la ejecuta y devuelve el resultado al modelo
-5. El modelo produce la respuesta final en español
+1. User sends a message
+2. Bot sends history to the model (with tool definitions)
+3. Model decides: respond directly **or** call a tool
+4. If it calls a tool, the bot executes it and returns the result to the model
+5. The model produces the final response in Spanish
 
-Ejemplo real: *"Tengo que arreglar el carro"* → el modelo llama `create_project` → el bot crea el proyecto y responde confirmándolo.
+Real example: *"I need to fix the car"* → the model calls `create_project` → the bot creates the project and responds confirming it.
 
-**Búsqueda web**: si el usuario pregunta algo que requiere información actual (ej: *"¿cuánto está el dólar hoy?"*), el modelo llama la tool `web_search` → el bot busca en DuckDuckGo (librería `ddgs`, sin API key) → devuelve los resultados al modelo → este resume y cita los enlaces.
+**Web search**: if the user asks something requiring current info (e.g., *"what's the dollar rate today?"*), the model calls the `web_search` tool → the bot searches DuckDuckGo (`ddgs` library, no API key needed) → returns results to the model → it summarizes and cites links.
 
-## Requisitos
+## Requirements
 
-- Python 3.12 (para desarrollo local)
-- Docker + Docker Compose (para despliegue)
-- `ffmpeg` (convierte notas de voz OGG→WAV; ya incluido en la imagen Docker)
-- Una cuenta en OpenCode Go (https://opencode.ai/auth)
-- Un bot de Telegram creado con @BotFather
-- Opcional: API key de Gemini (https://aistudio.google.com/) para notas de voz, fotos y `/imagina`
+- Python 3.12 (for local development)
+- Docker + Docker Compose (for deployment)
+- `ffmpeg` (converts voice notes OGG→WAV; already included in Docker image)
+- An OpenCode Go account (https://opencode.ai/auth)
+- A Telegram bot created with @BotFather
+- Optional: Gemini API key (https://aistudio.google.com/) for voice notes, photos and `/imagina`
 
-## Configuración
+## Configuration
 
-### 1. Obtener tokens
+### 1. Get tokens
 
-| Token | Dónde | Para qué |
-|-------|-------|----------|
-| `BOT_TOKEN` | @BotFather en Telegram (`/newbot`) | Conectar Telegram |
-| `OPENCODE_GO_API_KEY` | https://opencode.ai/auth | Llamar a la IA |
+| Token | Where | Purpose |
+|-------|-------|---------|
+| `BOT_TOKEN` | @BotFather on Telegram (`/newbot`) | Connect to Telegram |
+| `OPENCODE_GO_API_KEY` | https://opencode.ai/auth | Call the AI |
 
-### 2. Crear `.env`
+### 2. Create `.env`
 
 ```bash
 cd telegram-bot
 cp .env.example .env
-nano .env   # completar tokens y AUTHORIZED_USERS
+nano .env   # fill in tokens and AUTHORIZED_USERS
 ```
 
-### 3. Configurar usuarios autorizados
+### 3. Configure authorized users
 
 ```bash
-# Obtén tu ID con @userinfobot en Telegram
+# Get your ID with @userinfobot on Telegram
 AUTHORIZED_USERS=111111111,222222222,333333333,444444444
 ```
 
-> ⚠️ **Importante**: si `AUTHORIZED_USERS` está vacío o ausente, el bot **niega el acceso a todos** (fail-secure). Lista ahí los IDs de las personas que podrán usar el bot.
+> ⚠️ **Important**: if `AUTHORIZED_USERS` is empty or missing, the bot **denies access to everyone** (fail-secure). List the IDs of people who can use the bot.
 
-## Ejecución
+## Running
 
-> 🐳 **El bot siempre se ejecuta con Docker** (tanto en local como en el VPS).
-> La imagen Docker incluye `ffmpeg` (necesario para las notas de voz) y las
-> dependencias Python, por lo que no necesitas instalar nada en tu máquina
-> más allá de Docker + Docker Compose.
+> 🐳 **The bot always runs with Docker** (both locally and on the VPS).
+> The Docker image includes `ffmpeg` (needed for voice notes) and Python
+> dependencies, so you don't need to install anything on your machine
+> beyond Docker + Docker Compose.
 
-### Desarrollo local (Docker)
+### Local development (Docker)
 
 ```bash
 cd telegram-bot
-cp .env.example .env   # completar BOT_TOKEN, OPENCODE_GO_API_KEY, etc.
+cp .env.example .env   # fill in BOT_TOKEN, OPENCODE_GO_API_KEY, etc.
 docker compose up -d --build
 
-# Logs (para ver si arrancó bien)
+# Logs (to check it started correctly)
 docker compose logs -f
 
-# Reiniciar tras cambios de código
+# Restart after code changes
 docker compose up -d --build
 
-# Detener
+# Stop
 docker compose down
 ```
 
-> ⚠️ **Importante:** no levantes el bot local con el mismo `BOT_TOKEN` que el
-> del VPS mientras producción esté corriendo — Telegram solo permite un
-> long-polling por token y el bot en el VPS "gana" (el local recibirá errores
-> 409 Conflict). **Práctica recomendada (ya en uso):** usar **dos bots de
-> Telegram** — uno de desarrollo (creado con @BotFather, p. ej. `..._dev_bot`)
-> para el `.env` local y el de producción para el `.env` del VPS. Así puedes
-> probar en local sin tocar el bot de producción.
+> ⚠️ **Important:** don't run the local bot with the same `BOT_TOKEN` as the
+> VPS while production is running — Telegram only allows one long-polling
+> per token and the VPS bot "wins" (local will get 409 Conflict errors).
+> **Recommended practice (already in use):** use **two Telegram bots** —
+> one for development (created with @BotFather, e.g., `..._dev_bot`) for
+> the local `.env` and the production one for the VPS `.env`. This way you
+> can test locally without touching the production bot.
 
-> *Alternativa (solo desarrollo de módulos, sin Telegram):* el código Python
-> también corre directo con `python main.py` desde `.venv`, pero **no** es la
-> vía soportada — el contenedor Docker es el entorno de ejecución oficial.
+> *Alternative (for module development only, no Telegram):* the Python code
+> also runs directly with `python main.py` from `.venv`, but this is **not**
+> the supported path — the Docker container is the official runtime.
 
-### Deploy automático (CI/CD con GitHub Actions)
+### Automatic deploy (CI/CD with GitHub Actions)
 
-El repo incluye un workflow (`.github/workflows/deploy.example.yml`) que despliega al VPS en cada `git push` a `main`:
+The repo includes a workflow (`.github/workflows/deploy.example.yml`) that deploys to the VPS on every `git push` to `main`:
 
-1. GitHub Actions conecta al VPS por SSH con una clave de deploy dedicada
-2. Sincroniza el código con `rsync` (excluye `.env`, bases de datos, `.venv`, `.opencode/`)
-3. Ejecuta `docker compose up -d --build` en el VPS
-4. Limpia imágenes Docker antiguas
+1. GitHub Actions connects to the VPS via SSH with a dedicated deploy key
+2. Syncs code with `rsync` (excludes `.env`, databases, `.venv`, `.opencode/`)
+3. Runs `docker compose up -d --build` on the VPS
+4. Cleans up old Docker images
 
 ```bash
 git add .
-git commit -m "mi cambio"
-git push          # → deploy automático en ~1 min
+git commit -m "my change"
+git push          # → auto deploy in ~1 min
 ```
 
-**Requisitos en el VPS (una sola vez):**
-- Docker + Compose instalados
-- `.env` con los tokens reales en `~/telegram-bot/.env` (jamás se toca en deploys)
-- Clave pública de deploy en `~/.ssh/authorized_keys`
-- Secrets en GitHub: `DEPLOY_HOST`, `DEPLOY_USER`, `DEPLOY_PORT`, `DEPLOY_PATH`, `DEPLOY_KEY`
+**VPS requirements (one-time setup):**
+- Docker + Compose installed
+- `.env` with real tokens in `~/telegram-bot/.env` (never touched by deploys)
+- Deploy public key in `~/.ssh/authorized_keys`
+- Secrets in GitHub: `DEPLOY_HOST`, `DEPLOY_USER`, `DEPLOY_PORT`, `DEPLOY_PATH`, `DEPLOY_KEY`
 
-> El bot usa long-polling hacia Telegram y no expone puertos, por lo que **no necesita dominio** ni Cloudflare. El deploy va directo a la IP del VPS.
+> The bot uses long-polling to Telegram and exposes no ports, so it **doesn't need a domain** or Cloudflare. Deploy goes directly to the VPS IP.
 
-### Alternativa systemd (sin Docker)
+### Alternative: systemd (no Docker)
 
 ```bash
-# Editar telegram-bot.service con tu usuario real
+# Edit telegram-bot.service with your actual user
 sudo cp telegram-bot.service /etc/systemd/system/
 sudo systemctl daemon-reload
 sudo systemctl enable --now telegram-bot
@@ -180,218 +180,214 @@ sudo systemctl enable --now telegram-bot
 
 ## Tests (pytest)
 
-La suite de tests vive en `tests/` (unitarios + integración con objetos falsos de Telegram, sin red). El CI los ejecuta en cada push antes del deploy.
+The test suite lives in `tests/` (unit + integration with fake Telegram objects, no network). CI runs them on every push before deploy.
 
 ```bash
-# Dependencias de test (solo una vez por .venv)
+# Test dependencies (only once per .venv)
 .venv/bin/pip install -r requirements-dev.txt
 
-# Ejecutar todos los tests con cobertura
+# Run all tests with coverage
 .venv/bin/python -m pytest --cov=bot
 ```
 
-- `--cov=bot` muestra qué % del código de `bot/` ejecutan los tests (reporte por módulo).
-- En CI corre con `--cov-fail-under=80`: si la cobertura baja del 80%, el workflow falla y **no despliega**.
-- Los tests no requieren red ni tokens reales (todo mockeado).
+- `--cov=bot` shows what % of `bot/` code tests execute (report per module).
+- CI runs with `--cov-fail-under=80`: if coverage drops below 80%, the workflow fails and **doesn't deploy**.
+- Tests don't require network or real tokens (everything mocked).
 
-## Comandos del bot
+## Bot commands
 
-| Comando | Descripción |
+| Command | Description |
 |---------|-------------|
-| `/iniciar` (o `/start`) | Mensaje de bienvenida |
-| `/ayuda` | Lista de comandos |
-| `/info` | Estado del bot, modelo, tiempo activo |
-| `/reiniciar` | Limpiar la conversación actual |
-| `/dolar` | Ver la tasa del dólar hoy (oficial BCV y paralela USDT) |
-| `/proyectos` | Ver todos tus proyectos |
-| `/proyectos <estado>` | Ver proyectos por estado (`sin_iniciar`, `en_proceso`, `parado`, `completado`, `archivado`) |
-| `/proyectos dueños` | Ver solo los proyectos que eres dueño |
-| `/proyectos compartidos` | Ver los proyectos tuyos que compartiste con otros |
-| `/proyectos invitado` | Ver los proyectos que otros te compartieron |
-| `/nuevoproyecto <nombre>` | Crear un proyecto |
-| `/proyecto <nombre>` | Ver detalles, notas, dueño y compartidos de un proyecto |
-| `/estadoproyecto <nombre> <estado> [razón]` | Cambiar estado del proyecto |
-| `/prioridadproyecto <nombre> <prioridad>` | Cambiar prioridad (`baja`, `media`, `alta`, `urgente`) |
-| `/agregarnota <proyecto> <texto>` | Agregar una nota al proyecto |
-| `/buscarproyecto <término>` | Buscar proyectos (propios y compartidos) |
-| `/compartir <proyecto> @usuario` | Compartir un proyecto con otro usuario (solo el dueño; el invitado es avisado) |
-| `/quitaracceso <proyecto> @usuario` | Dejar de compartir un proyecto (solo el dueño) |
-| `/eliminarproyecto <nombre>` | Eliminar **definitivamente** un proyecto archivado (solo el dueño; libera espacio) |
-| `/recordar <texto>` | Programar un recordatorio (fecha en lenguaje natural) |
-| `/recordatorios` | Ver recordatorios pendientes (con botones para cancelar/posponer) |
-| `/cancelarrecordatorio <id>` | Cancelar un recordatorio |
-| `/editarrecordatorio <id> <texto>` | Editar el mensaje de un recordatorio |
-| `/posponerrecordatorio <id> <duración>` | Posponer un recordatorio (ej. `30m`, `2h`, `1d`) |
-| `/reprogramarrecordatorio <id> <fecha>` | Cambiar la fecha y hora de un recordatorio |
-| `/imagina <descripción>` | Generar una imagen con IA (Nano Banana de Gemini) |
+| `/iniciar` (or `/start`) | Welcome message |
+| `/ayuda` | Command list |
+| `/info` | Bot status, model, uptime |
+| `/reiniciar` | Clear current conversation |
+| `/dolar` | Today's dollar rate (official BCV and parallel USDT) |
+| `/proyectos` | View all your projects |
+| `/proyectos <status>` | View projects by status (`sin_iniciar`, `en_proceso`, `parado`, `completado`, `archivado`) |
+| `/proyectos owners` | View only projects you own |
+| `/proyectos shared` | View your projects shared with others |
+| `/proyectos guest` | View projects shared with you |
+| `/nuevoproyecto <name>` | Create a project |
+| `/proyecto <name>` | View project details, notes, owner and shared status |
+| `/estadoproyecto <name> <status> [reason]` | Change project status |
+| `/prioridadproyecto <name> <priority>` | Change priority (`baja`, `media`, `alta`, `urgente`) |
+| `/agregarnota <project> <text>` | Add a note to a project |
+| `/buscarproyecto <term>` | Search projects (yours and shared) |
+| `/compartir <project> @user` | Share a project with another user (owner only; guest is notified) |
+| `/quitaracceso <project> @user` | Stop sharing a project (owner only) |
+| `/eliminarproyecto <name>` | **Permanently** delete an archived project (owner only; frees space) |
+| `/recordar <text>` | Schedule a reminder (date in natural language) |
+| `/recordatorios` | View pending reminders (with cancel/postpone buttons) |
+| `/cancelarrecordatorio <id>` | Cancel a reminder |
+| `/editarrecordatorio <id> <text>` | Edit reminder message |
+| `/posponerrecordatorio <id> <duration>` | Postpone a reminder (e.g., `30m`, `2h`, `1d`) |
+| `/reprogramarrecordatorio <id> <date>` | Change reminder date and time |
+| `/imagina <description>` | Generate an image with AI (Nano Banana by Gemini) |
 
-También puedes conversar normalmente y el bot detectará automáticamente temas que merecen un proyecto, peticiones de recordatorio, o preguntas que requieren buscar en internet.
+You can also chat normally and the bot will automatically detect topics worthy of a project, reminder requests, or questions requiring web search.
 
-### Proyectos: prioridades, estados y lenguaje natural
+### Projects: priorities, statuses and natural language
 
-Los proyectos tienen **prioridad** y **estado** para organizar el seguimiento:
+Projects have **priority** and **status** for tracking organization:
 
-| Campo | Valores válidos |
-|-------|-----------------|
-| Prioridad | `baja` → `media` → `alta` → `urgente` |
-| Estado | `sin_iniciar` → `en_proceso` → `parado` → `completado` → `archivado` |
+| Field | Valid values |
+|-------|-------------|
+| Priority | `baja` → `media` → `alta` → `urgente` |
+| Status | `sin_iniciar` → `en_proceso` → `parado` → `completado` → `archivado` |
 
-Reglas importantes:
+Important rules:
 
-- Máximo **3 proyectos urgentes activos** por usuario. Para crear o subir a `urgente` uno nuevo, primero completa, archiva o baja la prioridad de los existentes. (Si un proyecto está compartido, el límite cuenta contra su **dueño**, no contra quien edita.)
-- Solo los proyectos **archivados** pueden eliminarse definitivamente (con `/eliminarproyecto <nombre>`, o por texto natural: *"elimina el proyecto X"*). La eliminación es **irreversible** (borra notas y archivos) y libera espacio; solo el dueño puede hacerla. En ambos casos el bot pide **confirmación con botones** antes de borrar.
-- También puedes usar **texto natural**: *"crea un proyecto para arreglar el carro"*, *"muéstrame mis proyectos urgentes"*, *"marca Reparar bici como completado"* o *"cambia la prioridad de Viaje a alta"*.
+- Maximum **3 active urgent projects** per user. To create or upgrade a new one to `urgente`, first complete, archive or lower priority of existing ones. (If a project is shared, the limit counts against its **owner**, not the editor.)
+- Only **archived** projects can be permanently deleted (with `/eliminarproyecto <name>`, or by natural language: *"delete project X"*). Deletion is **irreversible** (erases notes and files) and frees space; only the owner can do it. In both cases the bot asks for **button confirmation** before deleting.
+- You can also use **natural language**: *"create a project to fix the car"*, *"show me my urgent projects"*, *"mark Repair bike as completed"* or *"change Trip priority to high"*.
 
-El bot interpreta la intención y ejecuta la acción sin que memorices comandos.
+The bot interprets the intent and executes the action without memorizing commands.
 
-### Proyectos compartidos
+### Shared projects
 
-Un proyecto tiene un **dueño** (quien lo creó) y puede compartirse con otros usuarios autorizados:
+A project has an **owner** (who created it) and can be shared with other authorized users:
 
-- **`/compartir <proyecto> @usuario`** — solo el dueño puede compartir. El invitado obtiene acceso **inmediato** (ve y edita todo) y recibe un mensaje del bot avisándole.
-- **`/quitaracceso <proyecto> @usuario`** — solo el dueño puede quitar el acceso.
-- **`/proyecto <nombre>`** muestra quién es el dueño y con quién está compartido.
-- **`/proyectos`** acepta filtros: `dueños` (lo que eres dueño), `compartidos` (lo que compartiste) e `invitado` (lo que te compartieron).
-- También por **texto natural**: *"comparte el proyecto Casa con @mama"*, *"con quién está compartido el proyecto Casa"*, *"deja de compartir el proyecto Casa con @mama"*.
+- **`/compartir <project> @user`** — only the owner can share. The guest gets **immediate** access (sees and edits everything) and receives a bot notification.
+- **`/quitaracceso <project> @user`** — only the owner can revoke access.
+- **`/proyecto <name>`** shows who owns it and who it's shared with.
+- **`/proyectos`** accepts filters: `owners` (what you own), `shared` (what you shared) and `guest` (what was shared with you).
+- Also via **natural language**: *"share project House with @mom"*, *"who is project House shared with"*, *"stop sharing project House with @mom"*.
 
-> 🔒 **Privacidad**: solo ves tus proyectos y los que te compartieron explícitamente. Un invitado **no** puede ver otros proyectos, ni compartir/quitar acceso (solo el dueño), ni auto-invitarse. Para que alguien pueda ser invitado debe haber hablado con el bot al menos una vez (el bot resuelve el `@username` de los usuarios conocidos).
+> 🔒 **Privacy**: you only see your projects and those explicitly shared with you. A guest **cannot** see other projects, share/revoke access (only the owner can), or self-invite. For someone to be invited, they must have talked to the bot at least once (the bot resolves the `@username` of known users).
 
-### Grupos de Telegram
+### Telegram groups
 
-El bot funciona en grupos con paridad casi total (ver `specs/group-parity.md`):
+The bot works in groups with near-total parity (see `specs/group-parity.md`):
 
-- **Proyectos compartidos**: en un grupo, el bot muestra proyectos asociados a ese grupo. Al crear un proyecto en grupo, automáticamente se añaden a todos los miembros como colaboradores.
-- **Paridad**: `web_search`, `dolar_rate`, recordatorios y bitácora/memoria funcionan **en el grupo** (compartidos y aislados por `group_id`). Solo `generate_image` y `set_checkin_time` siguen privados.
-- **Recordatorios en grupo**: se entregan **en el grupo** y cualquier miembro puede ver/editar/borrar. Privados quedan aislados.
-- **Bitácora en grupo**: `memory/group_-xxx/` compartida, firmada `@usuario`, consultable con lenguaje natural.
-- **Comandos en grupo**: `/proyectos`, `/proyecto`, `/nuevoproyecto`, `/recordar` y `/recordatorios` funcionan en grupo con scope de grupo.
-- **Lenguaje natural**: *"lista los proyectos"*, *"crea un proyecto para X"*, *"recuérdame mañana a las 10"* funciona igual en grupo.
-- **Disolución**: si el bot es removido del grupo, se **borra todo** lo del grupo (proyectos, recordatorios, bitácora, historial).
+- **Shared projects**: in a group, the bot shows projects associated with that group. When creating a project in a group, all members are automatically added as collaborators.
+- **Parity**: `web_search`, `dolar_rate`, reminders and journal/memory work **in the group** (shared and isolated by `group_id`). Only `generate_image` and `set_checkin_time` remain private.
+- **Group reminders**: delivered **in the group** and any member can view/edit/delete. Private ones remain isolated.
+- **Group journal**: shared `memory/group_-xxx/`, signed `@user`, queryable with natural language.
+- **Commands in groups**: `/proyectos`, `/proyecto`, `/nuevoproyecto`, `/recordar` and `/recordatorios` work in groups with group scope.
+- **Natural language**: *"list projects"*, *"create a project for X"*, *"remind me tomorrow at 10"* works the same in groups.
+- **Dissolution**: if the bot is removed from the group, **everything** for that group is deleted (projects, reminders, journal, history).
 
-> 🔒 **Privacidad en grupos**: aislamiento estricto por `chat_id`. No ves proyectos/Bitácora/recordatorios de otro grupo ni privados en el grupo.
+> 🔒 **Group privacy**: strict isolation by `chat_id`. You don't see projects/journal/reminders from another group or private ones in the group.
 
-### Notas de voz y fotos
+### Voice notes and photos
 
-- **🎤 Notas de voz** — envíale una nota de voz y el bot la transcribe (Gemini) y responde. La transcripción entra a la conversación normal, así que puedes pedirle cosas por voz ("crea un proyecto para arreglar el carro").
-- **🖼️ Fotos** — envíale una foto (con o sin pie) y el bot la analiza con visión de Gemini y responde sobre su contenido. Las fotos **se procesan en memoria y se eliminan al terminar** — no se guardan en el servidor.
-- **🎨 `/imagina`** — genera una imagen desde una descripción: `/imagina un gato astronauta en la luna, estilo pixel art`.
+- **🎤 Voice notes** — send a voice note and the bot transcribes it (Gemini) and responds. The transcript enters normal conversation, so you can ask things by voice ("create a project to fix the car").
+- **🖼️ Photos** — send a photo (with or without caption) and the bot analyzes it with Gemini vision and responds about its content. Photos **are processed in memory and deleted when done** — not stored on the server.
+- **🎨 `/imagina`** — generates an image from a description: `/imagina an astronaut cat on the moon, pixel art style`.
 
-> Los medios siempre se procesan con Gemini (modelos `GEMINI_MEDIA_MODEL` / `GEMINI_IMAGE_MODEL`), incluso cuando el proveedor de chat es `opencode`, porque OpenCode Go no soporta audio ni visión. Requieren `GEMINI_API_KEY` configurada.
+> Media is always processed with Gemini (models `GEMINI_MEDIA_MODEL` / `GEMINI_IMAGE_MODEL`), even when the chat provider is `opencode`, because OpenCode Go doesn't support audio or vision. Requires `GEMINI_API_KEY` configured.
 
-### Límites diarios de medios
+### Daily media limits
 
-Para proteger la cuota gratuita de Gemini, hay un **tope diario por usuario** (se reinicia cada día en la zona horaria del bot):
+To protect the free Gemini quota, there's a **daily per-user cap** (resets each day in the bot's timezone):
 
-| Tipo | Variable | Default |
+| Type | Variable | Default |
 |------|----------|---------|
-| Imágenes (fotos analizadas + generadas) | `MEDIA_IMAGE_DAILY_LIMIT` | `30` |
-| Notas de voz | `MEDIA_AUDIO_DAILY_LIMIT` | `30` |
+| Images (analyzed + generated photos) | `MEDIA_IMAGE_DAILY_LIMIT` | `30` |
+| Voice notes | `MEDIA_AUDIO_DAILY_LIMIT` | `30` |
 
-Cuando el usuario se acerca al límite (≤3 restantes), el bot lo avisa en la respuesta. Al alcanzarlo, rechaza con un mensaje claro hasta el día siguiente. Poner `0` desactiva el tope.
+When the user approaches the limit (≤3 remaining), the bot warns in the response. When reached, it rejects with a clear message until the next day. Setting `0` disables the cap.
 
-### Recordatorios
+### Reminders
 
-Funcionan de dos formas:
+They work in two ways:
 
-1. **Mensaje normal**: escribe *"recuérdame la semana que viene llamar al mecánico"* — la IA lo detecta automáticamente y agenda el recordatorio. También puedes **gestionarlos hablando**: *"¿qué recordatorios tengo?"*, *"cancela el de mañana"*, *"cambia el recordatorio de llamar al mecánico"*, *"mueve el recordatorio 3 al viernes a las 5pm"*, *"pospón el recordatorio 5 dos horas"*.
-2. **Comando**: `/recordar llamar al mecánico el próximo lunes a las 10am`
+1. **Normal message**: write *"remind me next week to call the mechanic"* — the AI automatically detects it and schedules the reminder. You can also **manage them by talking**: *"what reminders do I have?"*, *"cancel tomorrow's"*, *"change the call mechanic reminder"*, *"move reminder 3 to Friday at 5pm"*, *"postpone reminder 5 by two hours"*.
+2. **Command**: `/recordar call the mechanic next Monday at 10am`
 
-Cuando llega el momento, el bot te envía un mensaje: `🔔 Recordatorio: llamar al mecánico`. Los recordatorios persisten en SQLite (sobreviven reinicios).
+When the time comes, the bot sends you a message: `🔔 Reminder: call the mechanic`. Reminders persist in SQLite (survive restarts).
 
-**Gestionar tus recordatorios**: `/recordatorios` lista los pendientes con botones **🔕 Cancelar** y **⏰ Posponer 1h**; también hay comandos `/editarrecordatorio`, `/posponerrecordatorio`, `/reprogramarrecordatorio` y `/cancelarrecordatorio <id>`. Si un envío falla (p. ej. sin conexión), el bot reintenta con esperas crecientes (10s, 20s, 40s...) hasta un máximo de 8 horas, sin perder el recordatorio.
+**Managing your reminders**: `/recordatorios` lists pending ones with **🔕 Cancel** and **⏰ Postpone 1h** buttons; there are also commands `/editarrecordatorio`, `/posponerrecordatorio`, `/reprogramarrecordatorio` and `/cancelarrecordatorio <id>`. If a delivery fails (e.g., no connection), the bot retries with increasing waits (10s, 20s, 40s...) up to a maximum of 8 hours, without losing the reminder.
 
-**Recordatorios recurrentes**: también puedes pedir que se repitan — *"recuérdame todos los lunes a las 8am tomar la medicina"*, *"cada día lavar el carro"*, *"el día 15 de cada mes pagar el internet"*. Frecuencias: `daily`, `weekly`, `monthly`. Al dispararse, el bot reprograma la próxima ocurrencia automáticamente; se cancelan con `/cancelarrecordatorio <id>`.
+**Recurring reminders**: you can also ask for repetitions — *"remind me every Monday at 8am to take medicine"*, *"every day wash the car"*, *"on the 15th of each month pay the internet"*. Frequencies: `daily`, `weekly`, `monthly`. When triggered, the bot automatically reschedules the next occurrence; cancel with `/cancelarrecordatorio <id>`.
 
-> ⚠️ **Nota para producción**: cuando quieras activar Gemini en el servidor (para el chat, notas de voz, fotos o `/imagina`), **actualiza a mano el `.env` del VPS** (`~/telegram-bot/.env`) añadiendo `GEMINI_API_KEY=...`. Los deploys con `git push` sincronizan el código pero **jamás tocan el `.env` del server** (está excluido en el workflow), por lo que la key de Gemini nunca llega sola — hay que ponerla manualmente. Mientras no la pongas, el bot en producción seguirá usando `opencode` para el chat y los medios no estarán disponibles.
+### Long-term memory (journal)
 
-> ⚠️ **`SYSTEM_PROMPT` en producción**: si el `.env` del VPS define un `SYSTEM_PROMPT` viejo, ese texto anulará el prompt por defecto nuevo (el que entiende estados/prioridades en español, el límite de 3 urgentes y las instrucciones de memoria/proactividad de la bitácora). Para activar las reglas nuevas, edita a mano `~/telegram-bot/.env` en el servidor y **borra o actualiza** la línea `SYSTEM_PROMPT`. Los deploys no la tocan.
+The bot keeps a **personal journal** of your day-to-day: when you tell it something notable (meals, sleep, exercise, travel, outings, bill payments, conversations, mood, anecdotes…), it automatically saves it to the day's journal. **No new commands** — everything is handled by **natural language**:
 
-### Memoria a largo plazo (bitácora)
+- **Capture** — during conversation the bot saves what you share to the day's journal.
+- **Summaries** — at night it compacts long days; every Monday generates a weekly summary; quarterly and yearly, period summaries (hierarchical and navigable). If the bot is off when a summary is due, **it catches up on its own** at next startup: recovers the last days, weeks, quarters and years that were pending, and your original journal is never lost.
+- **Recall** — when you ask about your past (*"when was my last trip to Panama?"*, *"what did I eat last week?"*, *"when did I pay the electric bill?"*), the bot searches summaries and the journal and answers accurately.
+- **Proactive** — morning check-in and evening wrap-up: it greets you, mentions pending tasks and journal patterns (exercise streaks, pending payments, absences) and reminds you of what's important. Default times are from `PROACTIVE_MORNING_TIME`/`PROACTIVE_EVENING_TIME`, but **each user can change theirs** via natural language: *"change my morning check-in to 9"* or *"move my evening check-in earlier"*.
 
-El bot lleva una **bitácora personal** de tu día a día: cuando le cuentas algo notable (comidas, sueño, ejercicio, viajes, salidas, pagos de servicios, conversaciones, estado de ánimo, anécdotas…), lo guarda automáticamente en la bitácora del día. **No hay comandos nuevos** — todo se maneja por **lenguaje natural**:
+To disable (partially or fully):
 
-- **Captura** — durante la conversación el bot guarda lo que compartes en la bitácora del día.
-- **Resúmenes** — de noche compacta los días largos; cada lunes genera un resumen semanal; trimestral y anual, los resúmenes de periodo (jerárquicos y navegables). Si el bot está apagado cuando toca un resumen, **se pone al día solo** en el siguiente arranque: recupera los últimos días, semanas, trimestres y años que hayan quedado pendientes, y tu bitácora original nunca se pierde.
-- **Recuerdo** — cuando preguntas por tu pasado (*"¿cuándo fue mi último viaje a Panamá?"*, *"¿qué comí la semana pasada?"*, *"¿cuándo pagué la luz?"*), el bot busca en los resúmenes y en la bitácora y responde con precisión.
-- **Proactividad** — check-in matutino y cierre vespertino: te saluda, menciona pendientes y patrones de la bitácora (rachas de ejercicio, pagos pendientes, ausencias) y te recuerda lo importante. Las horas por defecto son las de `PROACTIVE_MORNING_TIME`/`PROACTIVE_EVENING_TIME`, pero **cada usuario puede cambiar las suyas** por lenguaje natural: *"cambia mi check-in de la mañana a las 9"* o *"adelanta mi check-in de la tarde"*.
+| Variable | Effect when `false` | Default |
+|----------|---------------------|---------|
+| `MEMORY_ENABLED` | Disables capture, summaries and memory jobs | `true` |
+| `PROACTIVE_ENABLED` | Disables check-ins and proactive reminders | `true` |
 
-Para desactivarla (parcial o totalmente):
+> 🔒 **Privacy**: your journal is **per-user** — each authorized person has their own isolated journal. Lives in `DATA_DIR/memory/{user_id}/` inside the Docker volume (user data, never in git or code).
 
-| Variable | Efecto al poner `false` | Default |
-|----------|--------------------------|---------|
-| `MEMORY_ENABLED` | Desactiva la captura, los resúmenes y los jobs de memoria | `true` |
-| `PROACTIVE_ENABLED` | Desactiva los check-ins y recordatorios proactivos | `true` |
+## Environment variables
 
-> 🔒 **Privacidad**: tu bitácora es **por usuario** — cada persona autorizada tiene la suya aislada. Vive en `DATA_DIR/memory/{user_id}/` dentro del volumen Docker (dato de usuario, nunca en git ni en el código).
-
-## Variables de entorno
-
-| Variable | Descripción | Default |
+| Variable | Description | Default |
 |----------|-------------|---------|
-| `BOT_TOKEN` | Token del bot de Telegram | *(requerido)* |
-| `OPENCODE_GO_API_KEY` | API key de OpenCode Go | *(requerido si AI_PROVIDER=opencode)* |
-| `OPENCODE_BASE_URL` | Endpoint de la API | `https://opencode.ai/zen/go/v1` |
-| `MODEL` | Modelo de IA | `mimo-v2.5` |
-| `AI_PROVIDER` | Proveedor: `opencode` o `gemini` | `opencode` |
-| `GEMINI_API_KEY` | API key de Gemini (https://aistudio.google.com/) | vacío |
-| `GEMINI_BASE_URL` | Endpoint OpenAI-compatible de Gemini | `https://generativelanguage.googleapis.com/v1beta/openai/` |
-| `GEMINI_MODEL` | Modelo de Gemini | `gemini-3.1-flash-lite` (el más económico) |
-| `GEMINI_MEDIA_MODEL` | Modelo para voz/fotos | `gemini-3.6-flash` (el más barato con audio+visión) |
-| `GEMINI_IMAGE_MODEL` | Modelo para `/imagina` | `gemini-2.5-flash-image` (Nano Banana, gratis) |
-| `MEDIA_IMAGE_DAILY_LIMIT` | Tope diario de imágenes por usuario | `30` |
-| `MEDIA_AUDIO_DAILY_LIMIT` | Tope diario de notas de voz por usuario | `30` |
-| `AUTHORIZED_USERS` | IDs Telegram permitidos (coma-separados) | vacío (niega todo) |
-| `MAX_CONTEXT_MESSAGES` | Máx. mensajes de contexto por usuario | `30` |
-| `RATE_LIMIT_SECONDS` | Segundos entre mensajes por usuario | `5` |
-| `MAX_TOOL_ROUNDS` | Máx. rondas de tools por mensaje (válvula anti-loop; cada ronda = 1 llamada al API) | `12` |
-| `SYSTEM_PROMPT` | Personalidad del AI (si está vacío usa el default que entiende estados/prioridades, la memoria y la proactividad) | *(default en español)* |
-| `MEMORY_ENABLED` | Activa la bitácora (captura + resúmenes + jobs de memoria) | `true` |
-| `MEMORY_DAILY_COMPACT_WORDS` | Umbral de palabras para compactar un día de la bitácora | `1200` |
-| `PROACTIVE_ENABLED` | Activa check-ins y recordatorios proactivos | `true` |
-| `PROACTIVE_MORNING_TIME` | Hora del check-in matutino (HH:MM, 24h, en `TIMEZONE`) | `08:00` |
-| `PROACTIVE_EVENING_TIME` | Hora del check-in vespertino (HH:MM, 24h, en `TIMEZONE`) | `20:00` |
-| `PROACTIVE_MAX_DAILY` | Tope de mensajes proactivos por usuario y día (anti-molestia) | `3` |
-| `TIMEZONE` | Zona horaria para recordatorios | `America/Caracas` |
-| `LOG_LEVEL` | Nivel de logging | `INFO` |
-| `DATA_DIR` | Directorio de datos (Docker lo pone en `/app/data`) | `.` |
+| `BOT_TOKEN` | Telegram bot token | *(required)* |
+| `OPENCODE_GO_API_KEY` | OpenCode Go API key | *(required if AI_PROVIDER=opencode)* |
+| `OPENCODE_BASE_URL` | API endpoint | `https://opencode.ai/zen/go/v1` |
+| `MODEL` | AI model | `mimo-v2.5` |
+| `AI_PROVIDER` | Provider: `opencode` or `gemini` | `opencode` |
+| `GEMINI_API_KEY` | Gemini API key (https://aistudio.google.com/) | empty |
+| `GEMINI_BASE_URL` | Gemini OpenAI-compatible endpoint | `https://generativelanguage.googleapis.com/v1beta/openai/` |
+| `GEMINI_MODEL` | Gemini model | `gemini-3.1-flash-lite` (most economical) |
+| `GEMINI_MEDIA_MODEL` | Voice/photos model | `gemini-3.6-flash` (cheapest with audio+vision) |
+| `GEMINI_IMAGE_MODEL` | `/imagina` model | `gemini-2.5-flash-image` (Nano Banana, free) |
+| `MEDIA_IMAGE_DAILY_LIMIT` | Daily image cap per user | `30` |
+| `MEDIA_AUDIO_DAILY_LIMIT` | Daily voice note cap per user | `30` |
+| `AUTHORIZED_USERS` | Allowed Telegram IDs (comma-separated) | empty (denies all) |
+| `MAX_CONTEXT_MESSAGES` | Max context messages per user | `30` |
+| `RATE_LIMIT_SECONDS` | Seconds between messages per user | `5` |
+| `MAX_TOOL_ROUNDS` | Max tool rounds per message (anti-loop valve; each round = 1 API call) | `12` |
+| `SYSTEM_PROMPT` | AI personality (if empty uses default that understands statuses/priorities, memory and proactivity) | *(default in Spanish)* |
+| `MEMORY_ENABLED` | Enables journal (capture + summaries + memory jobs) | `true` |
+| `MEMORY_DAILY_COMPACT_WORDS` | Word threshold to compact a journal day | `1200` |
+| `PROACTIVE_ENABLED` | Enables check-ins and proactive reminders | `true` |
+| `PROACTIVE_MORNING_TIME` | Morning check-in time (HH:MM, 24h, in `TIMEZONE`) | `08:00` |
+| `PROACTIVE_EVENING_TIME` | Evening check-in time (HH:MM, 24h, in `TIMEZONE`) | `20:00` |
+| `PROACTIVE_MAX_DAILY` | Max proactive messages per user per day (anti-annoyance) | `3` |
+| `TIMEZONE` | Timezone for reminders | `America/Caracas` |
+| `LOG_LEVEL` | Logging level | `INFO` |
+| `DATA_DIR` | Data directory (Docker sets to `/app/data`) | `.` |
 
-## Modelos disponibles (económicos)
+## Available models (cost-effective)
 
-| Modelo | Uso |
-|--------|-----|
-| `deepseek-v4-flash` | Económico — Flash |
-| `mimo-v2.5` | Económico — **Default** |
+| Model | Use |
+|-------|-----|
+| `deepseek-v4-flash` | Economical — Flash |
+| `mimo-v2.5` | Economical — **Default** |
 
-> Solo se usan modelos económicos. Cambia con `MODEL=...` en `.env` y reinicia el contenedor.
+> Only cost-effective models are used. Change with `MODEL=...` in `.env` and restart the container.
 
-El modelo y el proveedor de IA **no se cambian desde el chat** (no hay comando ni opción por texto). Se fijan en el `.env` (`MODEL=...`, `AI_PROVIDER=...`, `GEMINI_MODEL=...`) y se aplican reiniciando el contenedor.
+The AI model and provider **cannot be changed from chat** (no command or text option). They're set in `.env` (`MODEL=...`, `AI_PROVIDER=...`, `GEMINI_MODEL=...`) and applied by restarting the container.
 
-## Persistencia de datos
+## Data persistence
 
-Los datos se guardan en un **volumen Docker nombrado** (`telegram-bot_bot_data` → `/app/data`):
+Data is stored in a **named Docker volume** (`telegram-bot_bot_data` → `/app/data`):
 
 ```
 /app/data/
-├── chat_history.db          ← historial de conversaciones
-├── projects.db              ← metadatos de proyectos (estado, prioridad, fechas,
-│                              compartición, perfiles), recordatorios y proactive_log
-├── memory.db                ← metadatos de la bitácora (días y resúmenes)
-├── media_usage.db           ← límites diarios de medios (imágenes y voz)
-├── projects/                ← contenido legible de proyectos
+├── chat_history.db          ← conversation history
+├── projects.db              ← project metadata (status, priority, dates,
+│                              sharing, profiles), reminders and proactive_log
+├── memory.db                ← journal metadata (days and summaries)
+├── media_usage.db           ← daily media limits (images and voice)
+├── projects/                ← readable project content
 │   └── {owner_id}/{slug}/
-│       ├── overview.md      ← descripción y estado
-│       ├── notes/{id}.md    ← notas
-│       └── context.json     ← resumen compacto para el AI
-└── memory/                  ← bitácora por tenant (usuario o grupo)
+│       ├── overview.md      ← description and status
+│       ├── notes/{id}.md    ← notes
+│       └── context.json     ← compact summary for AI
+└── memory/                  ← journal per tenant (user or group)
     ├── {user_id}/
-    │   ├── raw/YYYY-MM-DD.md     ← captura cruda del día (append en vivo)
-    │   ├── days/YYYY-MM-DD.md    ← compacto diario (si superó el umbral)
+    │   ├── raw/YYYY-MM-DD.md     ← raw daily capture (live append)
+    │   ├── days/YYYY-MM-DD.md    ← daily compact (if over threshold)
     │   └── summaries/
     │       ├── weekly/YYYY-Www.md
     │       ├── quarterly/YYYY-Q#.md
     │       └── yearly/YYYY.md
     └── group_-xxx/
-        ├── raw/YYYY-MM-DD.md     ← bitácora compartida, firmada @usuario
+        ├── raw/YYYY-MM-DD.md     ← shared journal, signed @user
         ├── days/YYYY-MM-DD.md
         └── summaries/...
 ```
@@ -403,32 +399,32 @@ docker run --rm -v telegram-bot_bot_data:/data -v $(pwd):/backup alpine \
   cp -r /data /backup/backup_$(date +%F)
 ```
 
-## Seguridad
+## Security
 
-- **Secrets nunca en git** — `.env` está en `.gitignore`
-- **Contenedor no-root** — corre como `botuser` (UID 999)
-- **Fail-secure** — sin `AUTHORIZED_USERS` nadie entra
-- **Rate limiting** — 3s entre mensajes por usuario (protege el presupuesto de Go)
-- **Límites de uso de Go** — $12/5h, $30/semana, $60/mes (suficiente para uso personal)
+- **Secrets never in git** — `.env` is in `.gitignore`
+- **Non-root container** — runs as `botuser` (UID 999)
+- **Fail-secure** — without `AUTHORIZED_USERS` nobody gets in
+- **Rate limiting** — 3s between messages per user (protects Go budget)
+- **Go usage limits** — $12/5h, $30/week, $60/month (enough for personal use)
 
-## Límites de OpenCode Go
+## OpenCode Go limits
 
-- 💰 $12 por 5 horas | $30 por semana | $60 por mes
-- El bot con rate limiting (3s) y contexto limitado (30 mensajes) es eficiente para 4 usuarios
-- Un bot público quemaría el presupuesto rápido — por eso el acceso está restringido
+- 💰 $12 per 5 hours | $30 per week | $60 per month
+- The bot with rate limiting (3s) and limited context (30 messages) is efficient for 4 users
+- A public bot would burn through the budget quickly — that's why access is restricted
 
 ## Troubleshooting
 
-| Problema | Solución |
-|----------|----------|
-| El bot no responde | Ver logs: `docker compose logs -f` |
-| `unable to open database file` | Permisos del volumen: `docker compose down -v && docker compose up -d --build` |
-| Usuario no autorizado | Revisar `AUTHORIZED_USERS` en `.env` |
-| `Reasoning_content must be passed back` | Reiniciar: `docker compose up -d --build` (ya corregido en código) |
-| Contenedor unhealthy | `docker compose ps` → suele ser el healthcheck; corregido con `procps` |
+| Problem | Solution |
+|---------|----------|
+| Bot doesn't respond | Check logs: `docker compose logs -f` |
+| `unable to open database file` | Volume permissions: `docker compose down -v && docker compose up -d --build` |
+| Unauthorized user | Check `AUTHORIZED_USERS` in `.env` |
+| `Reasoning_content must be passed back` | Restart: `docker compose up -d --build` (already fixed in code) |
+| Container unhealthy | `docker compose ps` → usually the healthcheck; fixed with `procps` |
 
-## Futuro (roadmap)
+## Future (roadmap)
 
-- [ ] **MCP** — conectar Notion, Gmail, Zoom (la arquitectura de tools ya está lista).
-      La opción de Google Workspace (Gmail/Calendar/Drive) está investigada y
-      documentada en `docs/mcp-google-workspace.md` (implementación pospuesta).
+- [ ] **MCP** — connect Notion, Gmail, Zoom (tool architecture is ready).
+      Google Workspace option (Gmail/Calendar/Drive) is researched and
+      documented in `docs/mcp-google-workspace.md` (implementation postponed).

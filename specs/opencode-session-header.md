@@ -1,14 +1,14 @@
 # Spec: OpenCode Go Session Header (`x-opencode-session`)
 
-**Estado:** Implementado
-**Fecha:** 2026-09-07
-**Objetivo:** Añadir el header `x-opencode-session` y un `User-Agent` propio a todas las peticiones al API de OpenCode Go, tal como requiere la API desde septiembre 2026.
+**Status:** Implemented
+**Date:** 2026-09-07
+**Objective:** Add the `x-opencode-session` header and a custom `User-Agent` to all requests to the OpenCode Go API, as required by the API since September 2026.
 
 ---
 
-## 1. Contexto y problema
+## 1. Context and problem
 
-El 2026-09-07 el bot dejó de responder a todos los mensajes. Los logs mostraban:
+On 2026-09-07 the bot stopped responding to all messages. The logs showed:
 
 ```
 ERROR bot.handlers: AI request failed for user 1234567890: API request failed:
@@ -17,59 +17,59 @@ Error code: 400 - {'type': 'error', 'error': {'type': 'MissingSessionID',
 and cannot be routed efficiently. Please see https://opencode.ai/docs/go/#where-can-i-use-it'}}
 ```
 
-El error afectaba **todas** las llamadas al API:
-- Chats de usuario → el bot recibe el mensaje pero no puede responder
-- Auto-journal (background) → falla silenciosamente cada hora
-- Proactive check-ins → fallan al generar mensajes
-- Sumarios → fallan al compactar
+The error affected **all** API calls:
+- User chats → the bot receives the message but cannot respond
+- Auto-journal (background) → fails silently every hour
+- Proactive check-ins → fail to generate messages
+- Summaries → fail to compact
 
-### Requisito de OpenCode Go
+### OpenCode Go requirement
 
-Según la [documentación oficial](https://opencode.ai/docs/go/#where-can-i-use-it), los clientes deben:
+According to the [official documentation](https://opencode.ai/docs/go/#where-can-i-use-it), clients must:
 
-1. Enviar tráfico típico de agente de código
-2. Identificarse con un User-Agent propio (no el genérico del SDK HTTP)
-3. Enviar un **session ID estable** en `x-opencode-session` por conversación, para optimizar routing y prompt caching
+1. Send typical code agent traffic
+2. Identify themselves with a custom User-Agent (not the generic HTTP SDK one)
+3. Send a **stable session ID** in `x-opencode-session` per conversation, to optimize routing and prompt caching
 
-El bot usaba el SDK `openai` (AsyncOpenAI) sin estos headers, por lo que todas las peticiones eran rechazadas con 400.
+The bot was using the `openai` SDK (AsyncOpenAI) without these headers, so all requests were rejected with 400.
 
 ---
 
-## 2. Solución
+## 2. Solution
 
-### 2.1 Estrategia: `extra_headers` por petición
+### 2.1 Strategy: `extra_headers` per request
 
-El SDK `openai` Python soporta `extra_headers` en cada llamada a `.create()`. Esto permite:
+The Python `openai` SDK supports `extra_headers` on each `.create()` call. This allows:
 
-- **Mantener el cliente compartido** en `bot_data["ai_client"]` (un solo pool de conexiones httpx)
-- **Pasar `session_id`** a través de la cadena de funciones
-- **Inyectar headers** solo en las peticiones al provider OpenCode (no afecta a Gemini)
+- **Keeping the shared client** in `bot_data["ai_client"]` (a single httpx connection pool)
+- **Passing `session_id`** through the function chain
+- **Injecting headers** only on requests to the OpenCode provider (does not affect Gemini)
 
-**Por qué no crear un cliente nuevo por petición:**
-Cada `AsyncOpenAI()` crea un `httpx.AsyncClient` con su propio pool de conexiones. Crear uno por mensaje sería lento y desperdiciaría recursos. El cliente compartido es la arquitectura correcta.
+**Why not create a new client per request:**
+Each `AsyncOpenAI()` creates an `httpx.AsyncClient` with its own connection pool. Creating one per message would be slow and waste resources. The shared client is the correct architecture.
 
-### 2.2 Session IDs por contexto
+### 2.2 Session IDs by context
 
-| Contexto | Session ID | Rationale |
+| Context | Session ID | Rationale |
 |----------|-----------|-----------|
-| Chat de usuario | `tg-user-{user_id}` | Estable por usuario → buen prompt caching |
-| Media (voz/foto) | `tg-media-{user_id}` | Routing separado para multimodal |
-| Auto-journal | `tg-auto-journal` | Background job, sesión única |
-| Proactive check-ins | `tg-proactive-{user_id}` | Proactivo por usuario |
-| Generación de imagen | `tg-image-{user_id}` | Routing separado para image gen |
-| Sumarios | `tg-summary-{user_id}` | Background summaries |
+| User chat | `tg-user-{user_id}` | Stable per user → good prompt caching |
+| Media (voice/photo) | `tg-media-{user_id}` | Separate routing for multimodal |
+| Auto-journal | `tg-auto-journal` | Background job, single session |
+| Proactive check-ins | `tg-proactive-{user_id}` | Proactive per user |
+| Image generation | `tg-image-{user_id}` | Separate routing for image gen |
+| Summaries | `tg-summary-{user_id}` | Background summaries |
 
 ### 2.3 User-Agent
 
-Todas las peticiones incluyen `User-Agent: telegram-ai-bot/1.0` para identificarse como agente, no como SDK genérico.
+All requests include `User-Agent: telegram-ai-bot/1.0` to identify as an agent, not as a generic SDK.
 
 ---
 
-## 3. Cambios en código
+## 3. Code changes
 
 ### 3.1 `bot/ai_client.py`
 
-Funciones modificadas para aceptar `session_id: str | None = None`:
+Functions modified to accept `session_id: str | None = None`:
 
 - `chat_completion()`
 - `chat_completion_with_tools()`
@@ -79,7 +79,7 @@ Funciones modificadas para aceptar `session_id: str | None = None`:
 - `parse_reminder_datetime()`
 - `_chat_request_with_retry()`
 
-Cuando `session_id` no es None y el provider es `opencode`, se añaden:
+When `session_id` is not None and the provider is `opencode`, the following are added:
 ```python
 extra_headers={
     "x-opencode-session": session_id,
@@ -89,62 +89,62 @@ extra_headers={
 
 ### 3.2 `bot/handlers.py`
 
-- `_run_ai_tool_loop()` recibe `session_id` y lo pasa a `chat_completion_with_tools()`
-- `_media_processor()` crea session ID `tg-media-{user_id}` para transcripción/análisis
-- Handlers de voz/foto/imagen pasan session IDs apropiados
+- `_run_ai_tool_loop()` receives `session_id` and passes it to `chat_completion_with_tools()`
+- `_media_processor()` creates session ID `tg-media-{user_id}` for transcription/analysis
+- Voice/photo/image handlers pass appropriate session IDs
 
 ### 3.3 `bot/auto_journal.py`
 
-Tres call sites usan `session_id="tg-auto-journal"`:
+Three call sites use `session_id="tg-auto-journal"`:
 - `_extract_entities_from_messages()`
 - `_extract_combined_from_messages()`
 - `_extract_events_from_messages()`
 
 ### 3.4 `bot/proactive.py`
 
-- `build_morning_message()` y `build_evening_message()` reciben `session_id=f"tg-proactive-{user_id}"`
-- `_generate_proactive_message()` pasa el session ID a `chat_completion()`
+- `build_morning_message()` and `build_evening_message()` receive `session_id=f"tg-proactive-{user_id}"`
+- `_generate_proactive_message()` passes the session ID to `chat_completion()`
 
 ### 3.5 `bot/tools.py`
 
-- `_dispatch_generate_image()` usa `session_id=f"tg-image-{user_id}"`
+- `_dispatch_generate_image()` uses `session_id=f"tg-image-{user_id}"`
 
 ### 3.6 `bot/summarizer.py`
 
-- `_call_model()` recibe `session_id` y lo pasa a `chat_completion()`
-- Las funciones de generación de sumarios construyen `session_id=f"tg-summary-{user_id}"`
+- `_call_model()` receives `session_id` and passes it to `chat_completion()`
+- Summary generation functions build `session_id=f"tg-summary-{user_id}"`
 
 ---
 
 ## 4. Tests
 
-### 4.1 Nuevos tests en `tests/test_ai_client.py`
+### 4.1 New tests in `tests/test_ai_client.py`
 
-- `test_session_header_sent_to_opencode`: verifica que `x-opencode-session` se envía cuando `session_id` no es None
-- `test_no_session_header_for_gemini`: verifica que el header NO se envía para provider Gemini
-- `test_user_agent_header`: verifica que `User-Agent: telegram-ai-bot/1.0` se envía
+- `test_session_header_sent_to_opencode`: verifies that `x-opencode-session` is sent when `session_id` is not None
+- `test_no_session_header_for_gemini`: verifies that the header is NOT sent for the Gemini provider
+- `test_user_agent_header`: verifies that `User-Agent: telegram-ai-bot/1.0` is sent
 
-### 4.2 Tests existentes
+### 4.2 Existing tests
 
-Todos los tests existentes deben seguir pasando sin cambios. El parámetro `session_id` es opcional (default None), por lo que el comportamiento sin session ID se mantiene.
+All existing tests must continue to pass without changes. The `session_id` parameter is optional (default None), so behavior without a session ID is preserved.
 
 ---
 
-## 5. Verificación post-deploy
+## 5. Post-deploy verification
 
-Después de desplegar, verificar en los logs del VPS:
+After deploying, verify in the VPS logs:
 
 ```bash
 docker compose logs -f | grep -E "(HTTP Request|ERROR)"
 ```
 
-- **OK**: `HTTP/1.1 200 OK` en las peticiones POST
-- **FAIL**: `HTTP/1.1 400 Bad Request` con `MissingSessionID`
+- **OK**: `HTTP/1.1 200 OK` on POST requests
+- **FAIL**: `HTTP/1.1 400 Bad Request` with `MissingSessionID`
 
 ---
 
-## 6. Referencias
+## 6. References
 
 - [OpenCode Go Docs — Where can I use it?](https://opencode.ai/docs/go/#where-can-i-use-it)
 - [OpenAI Python SDK — extra_headers](https://github.com/openai/openai-python#configuring-the-http-client)
-- Issue detectado: 2026-09-07 16:36 UTC
+- Issue detected: 2026-09-07 16:36 UTC

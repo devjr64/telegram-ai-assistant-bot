@@ -1,63 +1,62 @@
-# Google MCP — Investigación y plan de integración
+# Google MCP — Research and integration plan
 
-> **Estado**: investigación completada · Decisión: **posponer implementación** (2026-08-12)
-> **Solo desarrollo** — el bot de Telegram jamás lee este archivo (ver `AGENTS.md`).
+> **Status**: research completed · Decision: **postpone implementation** (2026-08-12)
+> **Development only** — the Telegram bot never reads this file (see `AGENTS.md`).
 
-## Resumen
+## Summary
 
-Objetivo a futuro: darle al bot acceso a la cuenta de Google del usuario
-(**Gmail**, **Calendar**, **Drive**) a través de MCP, para que el modelo pueda
-"ver" correos, agendar eventos o buscar archivos cuando el usuario se lo pida
-por chat. Esto cumple el roadmap del README: *"MCP — conectar Notion, Gmail,
-Zoom (la arquitectura de tools ya está lista)"*.
+Future goal: give the bot access to the user's Google account
+(**Gmail**, **Calendar**, **Drive**) through MCP, so the model can
+"see" emails, schedule events, or search for files when the user asks
+via chat. This fulfills the README roadmap: *"MCP — connect Notion, Gmail,
+Zoom (the tools architecture is already ready)"*.
 
-La integración **no se implementa todavía**: requiere OAuth manual de Google,
-un proceso Node.js y medidas de seguridad (ver [Decisión](#decisión)). Este
-documento guarda todo lo investigado para que la implementación futura sea
-rápida.
+The integration **is not implemented yet**: it requires manual Google OAuth,
+a Node.js process, and security measures (see [Decision](#decisión)). This
+document saves all the research so that future implementation is fast.
 
-## Contexto técnico del bot (por qué encaja MCP)
+## Bot technical context (why MCP fits)
 
-- El bot corre en **Docker, no-root, sin puertos expuestos** — solo hace
-  **conexiones salientes** (long-polling a Telegram).
-- MCP en modo **cliente** hace exactamente eso: conexiones HTTP salientes.
-  No hay conflicto con la arquitectura.
-- El bot ya tiene un loop de *function calling*: `TOOL_DEFINITIONS` en
-  `bot/tools.py` + `_dispatch()` + `execute_tool()`, todo devolviendo JSON
-  string al modelo. El bridge MCP encaja en este loop (ver más abajo).
-- Dependencias actuales: `httpx`, `AsyncOpenAI` (openai), sin cliente MCP aún.
+- The bot runs in **Docker, non-root, with no exposed ports** — it only makes
+  **outgoing connections** (long-polling to Telegram).
+- MCP in **client** mode does exactly that: outgoing HTTP connections.
+  There is no conflict with the architecture.
+- The bot already has a *function calling* loop: `TOOL_DEFINITIONS` in
+  `bot/tools.py` + `_dispatch()` + `execute_tool()`, all returning JSON
+  string to the model. The MCP bridge fits into this loop (see below).
+- Current dependencies: `httpx`, `AsyncOpenAI` (openai), no MCP client yet.
 
-## El panorama de Google MCP (estado actual, agosto 2026)
+## The Google MCP landscape (current state, August 2026)
 
-> ⚠️ **`https://mcp.google.com/mcp/serve` ya NO existe / no está en el
-> catálogo oficial.** Muchos tutoriales antiguos lo referencian — no usarlo.
-> Tampoco usar el paquete npm `mcp-google-studio-mcp` (obsoleto).
+> ⚠️ **`https://mcp.google.com/mcp/serve` no longer exists / is not in the
+> official catalog.** Many old tutorials reference it — do not use it.
+> Also do not use the npm package `mcp-google-studio-mcp` (obsolete).
 
-Hay **tres** opciones oficiales actuales:
+There are **three** current official options:
 
-| Opción | Qué expone | Auth | Esfuerzo |
-|--------|-----------|------|----------|
-| **A. Google Cloud remote MCP** | Productos GCP (BigQuery, Cloud SQL, Storage...) | OAuth/IAM (`roles/mcp.toolUser`) | Medio-Alto (cuenta GCP) |
-| **B. Google Workspace MCP** (open-source) | **Gmail, Calendar, Drive, Docs, Sheets, Slides, Chat, People** | OAuth de cuenta Google (manual una vez) | Medio |
-| **C. Gemini MCP** (hosted por Google) | `search` (grounding Google), `code_execution`, `fetch`, `google_earth`, `mcp_notes` | API key (`X-Goog-Api-Key`) | Bajo |
+| Option | What it exposes | Auth | Effort |
+|--------|----------------|------|--------|
+| **A. Google Cloud remote MCP** | GCP products (BigQuery, Cloud SQL, Storage...) | OAuth/IAM (`roles/mcp.toolUser`) | Medium-High (GCP account) |
+| **B. Google Workspace MCP** (open-source) | **Gmail, Calendar, Drive, Docs, Sheets, Slides, Chat, People** | Google account OAuth (manual one-time) | Medium |
+| **C. Gemini MCP** (hosted by Google) | `search` (Google grounding), `code_execution`, `fetch`, `google_earth`, `mcp_notes` | API key (`X-Goog-Api-Key`) | Low |
 
-Para el uso personal del bot, la opción relevante es la **B (Workspace)** — es
-la que conecta Gmail/Calendar/Drive. La opción C es trivial de integrar pero
-aporta poco nuevo (el bot ya tiene `web_search` con ddgs); es la buena si algún
-día se quiere grounding de Google más potente o ejecución de código.
+For the bot's personal use, the relevant option is **B (Workspace)** — it's
+the one that connects Gmail/Calendar/Drive. Option C is trivial to integrate
+but adds little new (the bot already has `web_search` with ddgs); it's the
+good one if someday you want more powerful Google grounding or code execution.
 
-## Google Workspace MCP server (detalle)
+## Google Workspace MCP server (details)
 
-- **Repo oficial**: https://github.com/gemini-cli-extensions/workspace
-  (antes dentro de `google/mcp`; hoy es una extensión de Gemini CLI, v0.0.8).
-- **Paquete npm**: `gemini-workspace-extension` (**privado**, no se instala con
-  `npm i` directo; se instala como extensión de Gemini CLI:
+- **Official repo**: https://github.com/gemini-cli-extensions/workspace
+  (previously inside `google/mcp`; today it's a Gemini CLI extension, v0.0.8).
+- **npm package**: `gemini-workspace-extension` (**private**, not installed
+  with `npm i` directly; installed as a Gemini CLI extension:
   `gemini extensions install https://github.com/gemini-cli-extensions/workspace`).
-- **Binario**: `gemini-workspace-server` (proceso Node.js, transporte **stdio**).
-- **Alternativa de hosting**: el repo puede hostearse en **Cloud Run** para
-  exponerlo vía **Streamable HTTP** (necesario si el bot se conecta por red).
+- **Binary**: `gemini-workspace-server` (Node.js process, **stdio** transport).
+- **Hosting alternative**: the repo can be hosted on **Cloud Run** to
+  expose it via **Streamable HTTP** (necessary if the bot connects over the network).
 
-### Tools que expone (lista completa de la doc oficial)
+### Tools it exposes (complete list from official docs)
 
 - **Auth**: `auth.clear`, `auth.refreshToken`
 - **Gmail**: `gmail.search`, `gmail.get`, `gmail.downloadAttachment`,
@@ -78,41 +77,41 @@ día se quiere grounding de Google más potente o ejecución de código.
 - **Time**: `time.getCurrentDate`, `time.getCurrentTime`, `time.getTimeZone`
 - **People**: `people.getUserProfile`, `people.getMe`, `people.getUserRelations`
 
-### Autenticación (OAuth)
+### Authentication (OAuth)
 
-- Requiere sesión de cuenta Google (OAuth 2.0, tokens por usuario).
-- **Flujo headless para Docker** (una sola vez por cuenta):
-  `npm run auth-utils -- login` → imprime una URL de OAuth → se abre en
-  cualquier navegador (máquina local o teléfono) → se pega el JSON de
-  credenciales en la CLI. Las credenciales **nunca se exponen al modelo**.
-- Los tokens se persisten (vía `keytar`/credential storage).
+- Requires Google account session (OAuth 2.0, per-user tokens).
+- **Headless flow for Docker** (one-time per account):
+  `npm run auth-utils -- login` → prints an OAuth URL → opens in
+  any browser (local machine or phone) → paste the credentials JSON
+  into the CLI. Credentials **are never exposed to the model**.
+- Tokens are persisted (via `keytar`/credential storage).
 
-### ⚠️ Seguridad (advertencia de Google en el propio README)
+### ⚠️ Security (Google's warning in the README itself)
 
-- El server puede **leer, modificar y borrar** datos reales de la cuenta.
-- Riesgo de **prompt injection indirecto**: no meter al contexto del modelo
-  contenido no confiable (correos, docs, archivos de fuentes no verificadas)
-  mientras haya tools de escritura conectadas. Revisar las acciones del agente.
-- En el bot: todo acceso MCP debe quedar detrás del gate de `AUTHORIZED_USERS`
-  (como el resto del bot) y **empezar con un subconjunto seguro de tools**
-  (lectura + `gmail.send`/`calendar.createEvent`), dejando fuera las destructivas
-  (`gmail.modify`, `drive.trashFile`, borrados) en una primera fase.
+- The server can **read, modify and delete** real account data.
+- Risk of **indirect prompt injection**: don't put untrusted content
+  (emails, docs, files from unverified sources) into the model context
+  while writing tools are connected. Review the agent's actions.
+- In the bot: all MCP access must be behind the `AUTHORIZED_USERS` gate
+  (like the rest of the bot) and **start with a safe subset of tools**
+  (read + `gmail.send`/`calendar.createEvent`), leaving out the destructive
+  ones (`gmail.modify`, `drive.trashFile`, deletions) in a first phase.
 
-## Cómo se integraría en el bot (plan técnico)
+## How it would be integrated into the bot (technical plan)
 
-Punto de integración: **el bot actúa como cliente MCP** y "traduce" las tools
-del server al formato function-calling de OpenAI que ya usa el modelo.
+Integration point: **the bot acts as an MCP client** and "translates" the
+server tools to the OpenAI function-calling format the model already uses.
 
-1. **Dependencia**: `mcp>=2.0,<3` (SDK Python oficial, async, sobre `httpx2`).
-   El SDK v2 conecta a servidores remotos (Streamable HTTP) y a subprocesos
-   stdio. Alternativa sin dependencia nueva: implementar el JSON-RPC 2.0 de
-   MCP a mano con el `httpx` existente (más trabajo).
-2. **Módulo nuevo `bot/mcp_client.py`**: conecta al server, hace
-   `list_tools()`, mantiene la sesión viva entre mensajes, y expone
+1. **Dependency**: `mcp>=2.0,<3` (official Python SDK, async, over `httpx2`).
+   The v2 SDK connects to remote servers (Streamable HTTP) and to stdio
+   subprocesses. Alternative without new dependency: implement MCP's
+   JSON-RPC 2.0 by hand with the existing `httpx` (more work).
+2. **New module `bot/mcp_client.py`**: connects to the server, does
+   `list_tools()`, keeps the session alive between messages, and exposes
    `call_tool(name, args)`.
-3. **Bridge en `bot/tools.py`**: cada tool MCP ya trae su JSON Schema
-   (`inputSchema`) — se mapea 1:1 a OpenAI function format con prefijo de
-   servidor para evitar colisiones, y se **anexa a `TOOL_DEFINITIONS`**:
+3. **Bridge in `bot/tools.py`**: each MCP tool already comes with its
+   JSON Schema (`inputSchema`) — it maps 1:1 to OpenAI function format
+   with server prefix to avoid collisions, and is **appended to `TOOL_DEFINITIONS`**:
    ```python
    def to_openai_tool(mcp_tool, server_name: str) -> dict:
        return {
@@ -120,85 +119,85 @@ del server al formato function-calling de OpenAI que ya usa el modelo.
            "function": {
                "name": f"{server_name}__{mcp_tool.name}",
                "description": mcp_tool.description or "",
-               "parameters": mcp_tool.inputSchema,  # JSON Schema ya
+               "parameters": mcp_tool.inputSchema,  # JSON Schema already
            },
        }
    ```
-4. **Dispatch en `_dispatch()`**: si el nombre empieza con `server__`, rutear a
-   `client.call_tool(...)` y devolver JSON string:
+4. **Dispatch in `_dispatch()`**: if the name starts with `server__`, route to
+   `client.call_tool(...)` and return JSON string:
    ```python
    result = await mcp_sessions[server].call_tool(name, args)
    if result.is_error:
        return json.dumps({"ok": False, "error": str(result.structured_content)})
    return json.dumps({"ok": True, "result": result.structured_content})
    ```
-5. **Config** (`bot/config.py` + `.env.example`): URL del server, qué services
-   habilitar, credenciales OAuth.
-6. **Docker**: ver decisión de despliegue abajo.
+5. **Config** (`bot/config.py` + `.env.example`): server URL, which services
+   to enable, OAuth credentials.
+6. **Docker**: see deployment decision below.
 
-### Decisiones de despliegue (evaluadas)
+### Deployment decisions (evaluated)
 
-El server es un proceso **Node.js (stdio)**. Tres formas de integrarlo:
+The server is a **Node.js (stdio)** process. Three ways to integrate it:
 
-| Opción | Cómo | Pros | Contras |
-|--------|------|------|---------|
-| **A. Node en el contenedor del bot** | Instalar Node en el `Dockerfile`; el bot lanza el server como subproceso stdio | Todo en un contenedor, simple | Añade Node.js; credenciales vía archivo/volumen |
-| **B. Servicio separado en docker-compose** | Contenedor Node aparte exponiendo el server vía Streamable HTTP | Separación limpia, el bot sigue sin Node | Más piezas; envolver stdio→HTTP (adaptador) |
-| **C. Hostear en Cloud Run** | El server en Cloud Run (HTTP), el bot se conecta remoto | Bot sin Node, escalable | Requiere cuenta GCP + otro deploy |
+| Option | How | Pros | Cons |
+|--------|-----|------|------|
+| **A. Node in the bot container** | Install Node in the `Dockerfile`; the bot launches the server as a stdio subprocess | Everything in one container, simple | Adds Node.js; credentials via file/volume |
+| **B. Separate service in docker-compose** | Separate Node container exposing the server via Streamable HTTP | Clean separation, bot remains without Node | More pieces; wrap stdio→HTTP (adapter) |
+| **C. Host on Cloud Run** | The server on Cloud Run (HTTP), the bot connects remotely | Bot without Node, scalable | Requires GCP account + another deploy |
 
-**Recomendación para un bot personal en VPS: opción A.**
+**Recommendation for a personal bot on VPS: option A.**
 
-### Timeouts y límites a respetar
+### Timeouts and limits to respect
 
-- Llamadas MCP tipo `code_execution`/búsquedas pueden tardar 30–300 s → usar
-  timeouts de lectura largos (`httpx2.Timeout(30.0, read=300.0)`) y mantener
-  todo async (nunca bloquear el event loop).
-- Reutilizar el rate limiter existente (3 s/mensaje/usuario) también para
-  operaciones MCP pesadas.
+- MCP calls like `code_execution`/searches can take 30–300 s → use
+  long read timeouts (`httpx2.Timeout(30.0, read=300.0)`) and keep
+  everything async (never block the event loop).
+- Reuse the existing rate limiter (3 s/message/user) also for
+  heavy MCP operations.
 
-## Decisión
+## Decision
 
-**Fecha**: 2026-08-12 · **Estado**: pospuesto · **Razón**: complejidad vs. valor actual
+**Date**: 2026-08-12 · **Status**: postponed · **Reason**: complexity vs. current value
 
-Se evaluó implementar la opción B (Google Workspace) en la rama
-`chore/mcp-config`. Se decidió **no implementar por ahora** porque:
+Implementing option B (Google Workspace) in the branch
+`chore/mcp-config` was evaluated. It was decided **not to implement for now** because:
 
-- Requiere **OAuth manual de Google** (flujo headless una vez por cuenta) y
-  **Node.js** en el entorno Docker (o un servicio/hosting extra).
-- Añade una **dependencia nueva** (`mcp` SDK, `httpx2`) y cambios en
+- It requires **manual Google OAuth** (headless flow one-time per account) and
+  **Node.js** in the Docker environment (or an extra service/hosting).
+- It adds a **new dependency** (`mcp` SDK, `httpx2`) and changes in
   Dockerfile/compose, `config.py`, `tools.py`, `handlers.py`.
-- Implica **riesgo de seguridad** (tools de escritura sobre datos reales de
-  Google + prompt injection) que hay que diseñar con cuidado.
-- El valor actual del bot (proyectos, recordatorios, dólar, web, medios) no
-  exige aún acceso a Gmail/Calendar/Drive.
+- It implies **security risk** (writing tools over real Google data
+  + prompt injection) that must be carefully designed.
+- The bot's current value (projects, reminders, dollar, web, media) does
+  not yet require access to Gmail/Calendar/Drive.
 
-**Alternativa ligera futura**: la opción C (Gemini MCP, solo API key) podría
-integrarse en horas si algún día se quiere grounding de Google/code_execution
-sin tocar OAuth ni Node.
+**Lightweight future alternative**: option C (Gemini MCP, API key only) could
+be integrated in hours if someday you want Google grounding/code_execution
+without touching OAuth or Node.
 
-## Plan de implementación futura (checklist)
+## Future implementation plan (checklist)
 
-Cuando se decida retomar:
+When it's decided to resume:
 
-- [ ] Definir qué services y qué tools se exponen (empezar por lectura +
+- [ ] Define which services and tools to expose (start with read +
       `gmail.send` + `calendar.createEvent`).
-- [ ] Crear `bot/mcp_client.py` (cliente MCP v2 + sesión viva).
-- [ ] Añadir `mcp>=2.0,<3` a `requirements.txt`.
-- [ ] Bridge en `bot/tools.py` (`to_openai_tool` + prefijo + dispatch).
-- [ ] Config en `bot/config.py` + `.env.example`.
-- [ ] Elegir despliegue (recomendado: **opción A**) y ajustar `Dockerfile`.
-- [ ] Flujo OAuth headless con el usuario (una vez) y guardar credenciales
-      fuera del contenedor/volumen.
-- [ ] Tests con el cliente MCP mockeado (sin red, patrón de `tests/`).
-- [ ] Revisión de seguridad (gate `AUTHORIZED_USERS`, subconjunto seguro,
-      alertas de prompt injection).
+- [ ] Create `bot/mcp_client.py` (MCP v2 client + live session).
+- [ ] Add `mcp>=2.0,<3` to `requirements.txt`.
+- [ ] Bridge in `bot/tools.py` (`to_openai_tool` + prefix + dispatch).
+- [ ] Config in `bot/config.py` + `.env.example`.
+- [ ] Choose deployment (recommended: **option A**) and adjust `Dockerfile`.
+- [ ] Headless OAuth flow with the user (one-time) and save credentials
+      outside the container/volume.
+- [ ] Tests with mocked MCP client (no network, pattern from `tests/`).
+- [ ] Security review (`AUTHORIZED_USERS` gate, safe subset,
+      prompt injection alerts).
 
-## Referencias
+## References
 
 - Google Workspace MCP: https://github.com/gemini-cli-extensions/workspace
 - MCP Python SDK (v2): https://py.sdk.modelcontextprotocol.io/
 - Google Cloud MCP (overview): https://docs.cloud.google.com/mcp/overview
 - Gemini MCP: https://mcp.ai.google.dev
-- Documentos de investigación crudos (contexto externo, temporales):
+- Raw research documents (external context, temporary):
   `.tmp/external-context/google-mcp/`, `.tmp/external-context/gemini-mcp/`,
   `.tmp/external-context/mcp-python-sdk/`

@@ -1,82 +1,82 @@
-# Soporte para Grupos — Telegram AI Bot
+# Group Support — Telegram AI Bot
 
-> **⚠️ Actualizado 2026-08-22:** Este plan inicial fue **implementado y ampliado** — la paridad completa está especificada en `specs/group-parity.md` (v1: web_search, dolar_rate, recordatorios y bitácora compartidos por grupo, entrega en el grupo). Este doc se conserva por historial; la referencia vigente es el spec.
+> **⚠️ Updated 2026-08-22:** This initial plan was **implemented and expanded** — full parity is specified in `specs/group-parity.md` (v1: web_search, dolar_rate, reminders and journal shared per group, delivery in the group). This doc is kept for history; the current reference is the spec.
 
-Plan de implementación para habilitar la interacción del bot en grupos de Telegram. **Solo para desarrollo** — el bot de Telegram jamás lee este archivo (ver `AGENTS.md`).
-
----
-
-## 1. Resumen Ejecutivo
-
-El bot actualmente funciona exclusivamente en chats privados. Este plan habilita la interacción en grupos de Telegram con las siguientes restricciones de privacidad:
-
-- **En grupos**: proyectos, recordatorios, bitácora/memoria, búsqueda web y dólar — todo **compartido y aislado por `group_id`** (paridad v1, ver `specs/group-parity.md`)
-- **En privado**: se accede a toda la información del usuario (igual que ahora), aislado de grupos
-- **Recordatorios y bitácora en grupo**: **compartidos por grupo**, se entregan en el grupo y cualquier miembro puede gestionar; privados quedan aislados
-- **Miembros no autorizados**: no pueden usar el bot en grupos
+Implementation plan to enable bot interaction in Telegram groups. **For development only** — the Telegram bot never reads this file (see `AGENTS.md`).
 
 ---
 
-## 2. Requisitos
+## 1. Executive Summary
 
-### 2.1 Funcionales
+The bot currently works exclusively in private chats. This plan enables interaction in Telegram groups with the following privacy restrictions:
 
-| ID | Requisito | Prioridad |
-|----|-----------|-----------|
-| F1 | El bot responde a mensajes naturales en grupos | Alta |
-| F2 | En grupos solo se muestran proyectos compartidos entre miembros | Alta |
-| F3 | Los proyectos en grupo tienen `group_id` (= `chat_id` del grupo) | Alta |
-| F4 | Crear proyecto en grupo añade automáticamente a todos los miembros | Alta |
-| F5 | Los proyectos en grupo se pueden editar desde chats privados | Alta |
-| F6 | Recordatorios en grupo son compartidos (entrega en el grupo, visibles por todos los miembros, aislados por `group_id`) | Alta |
-| F7 | Bitácora en grupo es compartida (`memory/group_-xxx/`, firmada `@usuario`) | Alta |
-| F8 | Solo usuarios autorizados pueden usar el bot en grupos | Alta |
-| F9 | El bot ignora a miembros no autorizados en grupos | Media |
-| F10 | Respuestas en grupo son públicas | Media |
-
-### 2.2 No funcionales
-
-| ID | Requisito |
-|----|-----------|
-| NF1 | Retrocompatibilidad: chats privados funcionan igual que antes |
-| NF2 | No exponer información privada de usuarios en grupos |
-| NF3 | Mantener la arquitectura existente (SQLite + Markdown) |
-| NF4 | Tests para nuevos flujos |
+- **In groups**: projects, reminders, journal/memory, web search and dollar rate — all **shared and isolated by `group_id`** (v1 parity, see `specs/group-parity.md`)
+- **In private**: all user information is accessible (same as now), isolated from groups
+- **Reminders and journal in groups**: **shared per group**, delivered in the group and manageable by any member; private ones remain isolated
+- **Unauthorized members**: cannot use the bot in groups
 
 ---
 
-## 3. Diseño de Base de Datos
+## 2. Requirements
 
-### 3.1 Cambio en tabla `projects`
+### 2.1 Functional
 
-Agregar campo `group_id` (nullable):
+| ID | Requirement | Priority |
+|----|-------------|----------|
+| F1 | Bot responds to natural messages in groups | High |
+| F2 | In groups, only projects shared among members are shown | High |
+| F3 | Group projects have `group_id` (= group's `chat_id`) | High |
+| F4 | Creating a project in a group automatically adds all members | High |
+| F5 | Group projects can be edited from private chats | High |
+| F6 | Group reminders are shared (delivery in the group, visible to all members, isolated by `group_id`) | High |
+| F7 | Group journal is shared (`memory/group_-xxx/`, signed `@user`) | High |
+| F8 | Only authorized users can use the bot in groups | High |
+| F9 | Bot ignores unauthorized members in groups | Medium |
+| F10 | Group responses are public | Medium |
+
+### 2.2 Non-functional
+
+| ID | Requirement |
+|----|-------------|
+| NF1 | Backward compatibility: private chats work the same as before |
+| NF2 | Do not expose private user information in groups |
+| NF3 | Maintain existing architecture (SQLite + Markdown) |
+| NF4 | Tests for new flows |
+
+---
+
+## 3. Database Design
+
+### 3.1 Change in `projects` table
+
+Add `group_id` field (nullable):
 
 ```sql
 ALTER TABLE projects ADD COLUMN group_id INTEGER;
 ```
 
-- `group_id = NULL`: proyecto privado (comportamiento actual)
-- `group_id = chat_id`: proyecto creado en grupo o asociado a grupo
+- `group_id = NULL`: private project (current behavior)
+- `group_id = chat_id`: project created in or associated with a group
 
-**Índice para queries de grupo:**
+**Index for group queries:**
 ```sql
 CREATE INDEX IF NOT EXISTS idx_projects_group ON projects(group_id);
 ```
 
-### 3.2 Cambio en tabla `users`
+### 3.2 Change in `users` table
 
-Agregar campo `private_chat_id` para recordatorios desde grupo:
+Add `private_chat_id` field for reminders from groups:
 
 ```sql
 ALTER TABLE users ADD COLUMN private_chat_id INTEGER;
 ```
 
-- Se actualiza cuando el usuario interactúa en chat privado
-- Se usa para crear recordatorios cuando el usuario pide en grupo
+- Updated when the user interacts in a private chat
+- Used to create reminders when the user requests from a group
 
-### 3.3 Nueva tabla `group_members`
+### 3.3 New `group_members` table
 
-Para rastrear qué usuarios son miembros de un grupo (necesario para auto-invitar al crear proyectos):
+To track which users are members of a group (needed to auto-invite when creating projects):
 
 ```sql
 CREATE TABLE IF NOT EXISTS group_members (
@@ -88,12 +88,12 @@ CREATE TABLE IF NOT EXISTS group_members (
 );
 ```
 
-**Índice:**
+**Index:**
 ```sql
 CREATE INDEX IF NOT EXISTS idx_group_members_user ON group_members(user_id);
 ```
 
-### 3.4 Diagrama ER
+### 3.4 ER Diagram
 
 ```
 ┌─────────────────┐      ┌─────────────────────┐
@@ -128,11 +128,11 @@ CREATE INDEX IF NOT EXISTS idx_group_members_user ON group_members(user_id);
 
 ---
 
-## 4. Cambios por Módulo
+## 4. Changes per Module
 
 ### 4.1 `bot/projects.py`
 
-#### Nuevas funciones
+#### New functions
 
 ```python
 def get_group_projects(group_id: int) -> list[dict]:
@@ -177,7 +177,7 @@ def create_group_project(
     # 5. Return project dict
 ```
 
-#### Funciones modificadas
+#### Modified functions
 
 ```python
 def create_project(
@@ -185,22 +185,22 @@ def create_project(
     name: str,
     description: str = "",
     priority: str = "media",
-    group_id: int | None = None,  # NUEVO PARÁMETRO
+    group_id: int | None = None,  # NEW PARAMETER
 ) -> dict | None:
     """Create a project, optionally in a group context."""
-    # Lógica existente + INSERT con group_id
+    # Existing logic + INSERT with group_id
 
 def list_projects(user_id: int, status_filter: str | None = None) -> list[dict]:
     """List a user's projects (no change - works for private)."""
-    # Sin cambios
+    # No changes
 
 def search_projects(user_id: int, query: str, group_id: int | None = None) -> list[dict]:
     """Search projects, optionally scoped to a group."""
-    # Si group_id: filtrar por group_id
-    # Si no: comportamiento actual
+    # If group_id: filter by group_id
+    # If not: current behavior
 ```
 
-#### Función para obtener private_chat_id
+#### Function to get private_chat_id
 
 ```python
 def get_private_chat_id(user_id: int) -> int | None:
@@ -211,15 +211,15 @@ def upsert_user(
     user_id: int, 
     username: str | None, 
     first_name: str | None,
-    private_chat_id: int | None = None,  # NUEVO PARÁMETRO
+    private_chat_id: int | None = None,  # NEW PARAMETER
 ) -> None:
     """Record or refresh a Telegram user's profile."""
-    # Si private_chat_id no es None, actualizar el campo
+    # If private_chat_id is not None, update the field
 ```
 
 ### 4.2 `bot/handlers.py`
 
-#### Cambios en `handle_message`
+#### Changes in `handle_message`
 
 ```python
 async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
@@ -231,18 +231,18 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
     chat = update.effective_chat
     user_id = update.effective_user.id
 
-    # NUEVO: Guardar private_chat_id si es chat privado
+    # NEW: Save private_chat_id if it's a private chat
     if chat.type == "private":
         upsert_user(user_id, update.effective_user.username, update.effective_user.first_name, private_chat_id=chat.id)
 
-    # NUEVO: Registrar al usuario como miembro del grupo si aplica
+    # NEW: Register the user as a group member if applicable
     if chat.type in ("group", "supergroup"):
         add_group_member(chat.id, user_id)
 
-    # ... resto de la lógica existente ...
+    # ... rest of existing logic ...
 ```
 
-#### Nuevo handler `handle_message_group`
+#### New handler `handle_message_group`
 
 ```python
 async def handle_message_group(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
@@ -254,28 +254,28 @@ async def handle_message_group(update: Update, context: ContextTypes.DEFAULT_TYP
     group_id = update.effective_chat.id
     user_text = update.message.text.strip()
 
-    # Registrar al usuario como miembro del grupo
+    # Register the user as a group member
     add_group_member(group_id, user_id)
     upsert_user(user_id, update.effective_user.username, update.effective_user.first_name)
 
-    # Rate limit (mismo sistema)
+    # Rate limit (same system)
     if _is_rate_limited(user_id, settings):
         return
 
-    # Construir contexto SOLO con proyectos del grupo
+    # Build context ONLY with group projects
     group_projects = get_shared_projects_in_group(group_id)
     
-    # Guardar mensaje en historial (por usuario, no por grupo)
+    # Save message in history (per user, not per group)
     add_message(user_id, "user", user_text)
     history = get_history(user_id, settings.max_context_messages)
 
-    # Obtener private_chat_id para recordatorios
+    # Get private_chat_id for reminders
     private_chat_id = get_private_chat_id(user_id)
 
-    # Inyectar contexto del grupo en el system prompt
+    # Inject group context into the system prompt
     system_prompt = _build_group_system_prompt(settings, group_projects, group_id, private_chat_id)
     
-    # Llamar al modelo con tools filtradas para grupo
+    # Call the model with tools filtered for groups
     reply_text = await _run_ai_tool_loop(
         client=client,
         settings=settings,
@@ -284,11 +284,11 @@ async def handle_message_group(update: Update, context: ContextTypes.DEFAULT_TYP
         model=model,
         context=context,
         chat_id=group_id,
-        group_context=group_id,  # NUEVO: indica contexto de grupo
-        private_chat_id=private_chat_id,  # NUEVO: para recordatorios
+        group_context=group_id,  # NEW: indicates group context
+        private_chat_id=private_chat_id,  # NEW: for reminders
     )
 
-    # Responder públicamente
+    # Respond publicly
     if reply_text:
         add_message(user_id, "assistant", reply_text)
         await _reply_markdown_safe(update.message, reply_text)
@@ -296,28 +296,28 @@ async def handle_message_group(update: Update, context: ContextTypes.DEFAULT_TYP
 
 ### 4.3 `bot/tools.py`
 
-#### Filtrado de tools por contexto (paridad v1 — ver `specs/group-parity.md`)
+#### Tool filtering by context (v1 parity — see `specs/group-parity.md`)
 
 ```python
-# Grupo: paridad casi total (solo 6 privadas)
+# Group: nearly full parity (only 6 private)
 GROUP_TOOLS = {
     "list_projects", "search_projects", "get_project",
     "create_project", "add_project_note",
     "update_project_status", "update_project_priority", "update_project_description",
     "create_reminder", "list_reminders", "cancel_reminder", "edit_reminder",
-    "reschedule_reminder", "postpone_reminder",  # recordatorios compartidos por group_id
+    "reschedule_reminder", "postpone_reminder",  # reminders shared per group_id
     "create_entity", "list_entities", "search_entities", "get_entity_details",
     "add_entity_note", "update_entity", "archive_entity",
     "web_search", "dolar_rate",
     "journal_append", "memory_read", "memory_recall", "memory_insights",
 }
 PRIVATE_ONLY_TOOLS = {
-    "generate_image", "set_checkin_time",  # cuota / proactivo personal
+    "generate_image", "set_checkin_time",  # personal quota / proactive
     "share_project", "unshare_project", "delete_project", "list_project_members",
 }
 ```
 
-#### Modificación en `execute_tool`
+#### Modification in `execute_tool`
 
 ```python
 async def execute_tool(
@@ -325,30 +325,30 @@ async def execute_tool(
     args: dict, 
     user_id: int,
     group_id: int | None = None,
-    private_chat_id: int | None = None,  # NUEVO
+    private_chat_id: int | None = None,  # NEW
 ) -> str:
     """Execute a tool, with group scoping when applicable."""
     
-    # NUEVO: Bloquear tools privadas en contexto de grupo
+    # NEW: Block private tools in group context
     if group_id is not None and name in PRIVATE_TOOLS:
         return json.dumps({
             "ok": False,
-            "error": "Esta acción solo está disponible en chats privados con el bot."
+            "error": "This action is only available in private chats with the bot."
         })
     
-    # NUEVO: Para create_reminder en grupo, usar private_chat_id
+    # NEW: For create_reminder in groups, use private_chat_id
     if group_id is not None and name == "create_reminder":
-        args["chat_id"] = private_chat_id  # Inyectar chat privado
+        args["chat_id"] = private_chat_id  # Inject private chat
     
-    # NUEVO: Para tools de proyecto en grupo, filtrar por group_id
+    # NEW: For project tools in groups, filter by group_id
     if group_id is not None and name in GROUP_TOOLS:
         if name in ("list_projects", "search_projects"):
-            args["_group_id"] = group_id  # Inyectar scope de grupo
+            args["_group_id"] = group_id  # Inject group scope
     
-    # ... lógica existente ...
+    # ... existing logic ...
 ```
 
-#### Nueva tool `create_group_project`
+#### New tool `create_group_project`
 
 ```python
 {
@@ -356,16 +356,16 @@ async def execute_tool(
     "function": {
         "name": "create_group_project",
         "description": (
-            "Crear un proyecto nuevo en el grupo actual. Los miembros del grupo "
-            "se añaden automáticamente como colaboradores. Solo usar cuando el "
-            "usuario pide crear un proyecto EN EL GRupo (no en privado)."
+            "Create a new project in the current group. Group members "
+            "are automatically added as collaborators. Only use when the "
+            "user asks to create a project IN THE GROUP (not in private)."
         ),
         "parameters": {
             "type": "object",
             "properties": {
-                "name": {"type": "string", "description": "Nombre del proyecto"},
-                "description": {"type": "string", "description": "Descripción del proyecto"},
-                "priority": {"type": "string", "enum": ["baja", "media", "alta", "urgente"]},
+                "name": {"type": "string", "description": "Project name"},
+                "description": {"type": "string", "description": "Project description"},
+                "priority": {"type": "string", "enum": ["low", "medium", "high", "urgent"]},
             },
             "required": ["name"],
         },
@@ -375,7 +375,7 @@ async def execute_tool(
 
 ### 4.4 `bot/project_commands.py`
 
-#### Modificar comandos para contexto de grupo
+#### Modify commands for group context
 
 ```python
 async def proyectos_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
@@ -388,40 +388,40 @@ async def proyectos_command(update: Update, context: ContextTypes.DEFAULT_TYPE) 
     user_id = update.effective_user.id
 
     if chat.type in ("group", "supergroup"):
-        # En grupo: solo proyectos compartidos en este grupo
+        # In group: only shared projects in this group
         projects = get_shared_projects_in_group(chat.id)
-        scope_label = "en este grupo"
+        scope_label = "in this group"
     else:
-        # En privado: todos los proyectos del usuario
+        # In private: all user's projects
         projects = list_projects(user_id)
-        scope_label = "tuyos"
+        scope_label = "yours"
 
     if not projects:
         await update.message.reply_text(
-            f"No tienes proyectos {scope_label}."
+            f"You don't have projects {scope_label}."
         )
         return
 
-    # ... formatear y responder ...
+    # ... format and respond ...
 ```
 
 ### 4.5 `bot/bot.py`
 
-#### Registro de handlers actualizado
+#### Updated handler registration
 
 ```python
 def create_application() -> Application:
-    # ... existente ...
+    # ... existing ...
 
-    # Comandos en privado (como antes)
+    # Commands in private (as before)
     app.add_handler(CommandHandler("start", start_command))
     app.add_handler(CommandHandler("ayuda", help_command))
     # ...
 
-    # Comandos en grupo (NUEVO - mismos handlers)
-    # Los comandos funcionan en ambos contextos por defecto
+    # Commands in group (NEW - same handlers)
+    # Commands work in both contexts by default
 
-    # Texto en privado
+    # Text in private
     app.add_handler(
         MessageHandler(
             filters.TEXT & ~filters.COMMAND & filters.ChatType.PRIVATE,
@@ -429,7 +429,7 @@ def create_application() -> Application:
         )
     )
 
-    # Texto en grupo (NUEVO)
+    # Text in group (NEW)
     app.add_handler(
         MessageHandler(
             filters.TEXT & ~filters.COMMAND & (filters.ChatType.GROUP | filters.ChatType.SUPERGROUP),
@@ -437,38 +437,38 @@ def create_application() -> Application:
         )
     )
 
-    # Voz y fotos: privado solamente (sin cambios)
+    # Voice and photos: private only (no changes)
     app.add_handler(MessageHandler(filters.VOICE & filters.ChatType.PRIVATE, handle_voice))
     app.add_handler(MessageHandler(filters.PHOTO & filters.ChatType.PRIVATE, handle_photo))
 ```
 
 ### 4.6 `bot/config.py`
 
-#### Nuevas variables de entorno
+#### New environment variables
 
 ```python
 @dataclass(frozen=True)
 class Settings:
-    # ... existente ...
+    # ... existing ...
     
-    # NUEVO: Comportamiento en grupos
+    # NEW: Group behavior
     group_response_mode: str = field(
         default_factory=lambda: os.environ.get("GROUP_RESPONSE_MODE", "public")
-    )  # "public" | "silent" (ignorar no-autorizados)
+    )  # "public" | "silent" (ignore unauthorized)
     
     group_auto_add_members: bool = field(
         default_factory=lambda: _parse_bool(os.environ.get("GROUP_AUTO_ADD_MEMBERS", "true"))
-    )  # Auto-añadir miembros al crear proyecto
+    )  # Auto-add members when creating project
 ```
 
 ### 4.7 `bot/reminders.py`
 
-#### Modificación en `create_reminder`
+#### Modification in `create_reminder`
 
 ```python
 def create_reminder(
     user_id: int,
-    chat_id: int,  # Ahora puede ser private_chat_id cuando se pide desde grupo
+    chat_id: int,  # Now can be private_chat_id when requested from a group
     message: str,
     remind_at: float,
     recurrence: str = "none",
@@ -478,290 +478,290 @@ def create_reminder(
     When called from a group context, chat_id should be the user's
     private_chat_id (not the group chat_id).
     """
-    # Lógica existente - sin cambios necesarios
-    # El chat_id ya se inyecta desde execute_tool con el valor correcto
+    # Existing logic - no changes needed
+    # chat_id is already injected from execute_tool with the correct value
 ```
 
 ---
 
-## 5. Flujo de Datos
+## 5. Data Flow
 
-### 5.1 Mensaje en grupo: "lista los proyectos"
-
-```
-1. Usuario envía "lista los proyectos" en grupo
-2. handle_message_group() recibe el update
-3. Valida autorización (AUTHORIZED_USERS)
-4. Registra usuario como miembro del grupo (group_members)
-5. Obtiene proyectos compartidos del grupo (get_shared_projects_in_group)
-6. Construye system prompt con contexto del grupo
-7. Llama al modelo con historial del usuario + contexto del grupo
-8. Modelo genera respuesta
-9. Responde públicamente en el grupo
-```
-
-### 5.2 Crear proyecto en grupo: "crea un proyecto para arreglar el carro"
+### 5.1 Message in group: "list the projects"
 
 ```
-1. Usuario envía "crea un proyecto para arreglar el carro" en grupo
-2. handle_message_group() procesa el mensaje
-3. Modelo decide llamar create_group_project
+1. User sends "list the projects" in a group
+2. handle_message_group() receives the update
+3. Validates authorization (AUTHORIZED_USERS)
+4. Registers user as group member (group_members)
+5. Gets shared projects from the group (get_shared_projects_in_group)
+6. Builds system prompt with group context
+7. Calls the model with user history + group context
+8. Model generates response
+9. Responds publicly in the group
+```
+
+### 5.2 Create project in group: "create a project to fix the car"
+
+```
+1. User sends "create a project to fix the car" in a group
+2. handle_message_group() processes the message
+3. Model decides to call create_group_project
 4. create_group_project():
-   a. Crea el proyecto con owner_id = usuario
-   b. Asigna group_id = chat_id del grupo
-   c. Obtiene todos los miembros del grupo
-   d. Añade cada miembro como collaborator (project_members)
-5. Responde confirmando la creación
+   a. Creates the project with owner_id = user
+   b. Sets group_id = group's chat_id
+   c. Gets all group members
+   d. Adds each member as a collaborator (project_members)
+5. Responds confirming the creation
 ```
 
-### 5.3 Recordatorio en grupo: "recuérdame llamar al registro en 3 días"
+### 5.3 Reminder in group: "remind me to call the registry in 3 days"
 
 ```
-1. Usuario envía "recuérdame llamar al registro en 3 días" en grupo
-2. handle_message_group() detecta intención + inyecta group_id
-3. Modelo llama create_reminder con group_id
-4. execute_tool() crea con group_id (aislado por grupo, entrega en el grupo)
-5. Responde: "Ok, te recordaré aquí en el grupo a las..."
-6. check_due_reminders entrega en group_id (cualquiera puede gestionarlo)
+1. User sends "remind me to call the registry in 3 days" in a group
+2. handle_message_group() detects intent + injects group_id
+3. Model calls create_reminder with group_id
+4. execute_tool() creates with group_id (isolated per group, delivered in the group)
+5. Responds: "Ok, I'll remind you here in the group at..."
+6. check_due_reminders delivers to group_id (anyone can manage it)
 ```
 
-### 5.4 Editar proyecto desde privado
+### 5.4 Edit project from private chat
 
 ```
-1. En chat privado, usuario dice "cambia el estado de Arreglar Carro a en proceso"
-2. handle_message() procesa (sin cambios)
-3. Modelo llama update_project_status
-4. Actualiza el proyecto (independiente de group_id)
-5. El cambio se refleja tanto en privado como en grupo
+1. In private chat, user says "change the status of Fix Car to in progress"
+2. handle_message() processes (no changes)
+3. Model calls update_project_status
+4. Updates the project (independent of group_id)
+5. The change is reflected both in private chat and in the group
 ```
 
 ---
 
-## 6. Casos de Uso
+## 6. Use Cases
 
-### CU-01: Listar proyectos en grupo
+### UC-01: List projects in group
 
-**Actor**: Usuario autorizado en grupo
-**Precondición**: Proyectos compartidos existen
-**Flujo**:
-1. Usuario escribe "lista los proyectos" o "/proyectos"
-2. Bot responde con proyectos compartidos en ese grupo
-3. No muestra proyectos privados de ningún miembro
+**Actor**: Authorized user in group
+**Precondition**: Shared projects exist
+**Flow**:
+1. User types "list the projects" or "/proyectos"
+2. Bot responds with shared projects in that group
+3. Does not show private projects from any member
 
-### CU-02: Crear proyecto en grupo
+### UC-02: Create project in group
 
-**Actor**: Usuario autorizado en grupo
-**Precondición**: Ninguno
-**Flujo**:
-1. Usuario escribe "crea un proyecto llamado X"
-2. Bot crea el proyecto con el usuario como dueño
-3. Bot añade automáticamente a todos los miembros del grupo como colaboradores
-4. Bot asigna `group_id = chat_id`
-5. Bot confirma la creación
+**Actor**: Authorized user in group
+**Precondition**: None
+**Flow**:
+1. User types "create a project called X"
+2. Bot creates the project with the user as owner
+3. Bot automatically adds all group members as collaborators
+4. Bot sets `group_id = chat_id`
+5. Bot confirms the creation
 
-### CU-03: Crear recordatorio en grupo
+### UC-03: Create reminder in group
 
-**Actor**: Usuario autorizado en grupo
-**Precondición**: Usuario tiene chat privado con el bot
-**Flujo**:
-1. Usuario escribe "recuérdame algo en 3 días" en grupo
-2. Bot crea el recordatorio usando el `private_chat_id` del usuario
-3. Bot responde: "Ok, te recordaré por tu chat privado"
-4. El recordatorio se entrega en el chat privado del usuario (no en el grupo)
+**Actor**: Authorized user in group
+**Precondition**: User has a private chat with the bot
+**Flow**:
+1. User types "remind me of something in 3 days" in a group
+2. Bot creates the reminder using the user's `private_chat_id`
+3. Bot responds: "Ok, I'll remind you in your private chat"
+4. The reminder is delivered in the user's private chat (not in the group)
 
-### CU-04: Editar proyecto desde privado
+### UC-04: Edit project from private chat
 
-**Actor**: Usuario autorizado
-**Precondición**: Proyecto existe (puede ser de grupo)
-**Flujo**:
-1. En chat privado, usuario pide editar el proyecto
-2. Bot permite la edición (ACL normal)
-3. Cambios se reflejan en grupo y privado
-
----
-
-## 7. Restricciones de Privacidad
-
-### 7.1 Reglas estrictas
-
-| Regla | Implementación |
-|-------|----------------|
-| No exponer proyectos privados en grupo | `get_shared_projects_in_group()` solo retorna proyectos con `group_id` |
-| Recordatorios aislados por grupo | `reminders.group_id` (entrega en el grupo, `list_pending_reminders(..., group_id)`) |
-| Bitácora aislada por grupo | `memory.db` con `group_id` + `memory/group_-xxx/` (firmada `@usuario`) |
-| No mostrar historial de otros usuarios | Historial siempre por `user_id`+`chat_id`, tenant por `group_id` |
-| Auto-añadir al crear proyecto de grupo | `create_group_project` añade `group_members` |
-| Gestionar recordatorios en grupo | Cualquier miembro puede ver/editar/borrar (shared) |
-
-### 7.2 Escenarios protegidos
-
-1. **Ana pide "muestra los proyectos de Luis"**: Bot responde "Solo puedes ver proyectos que te hayan compartido"
-2. **Luis pide "recuérdame algo" en grupo**: Bot crea el recordatorio para Luis (con su `private_chat_id`) y responde "Ok, te recordaré por tu chat privado"
-3. **Miembro no autorizado intenta usar el bot**: Bot ignora silenciosamente
-4. **Usuario pide "muestra mi historial" en grupo**: Bot responde "El historial es privado"
-5. **Usuario pide "cancela mis recordatorios" en grupo**: Bot responde "Esta acción solo está disponible en chats privados con el bot"
-5. **Usuario pide "cancela mis recordatorios" en grupo**: Bot responde "Esta acción solo está disponible en chats privados con el bot"
+**Actor**: Authorized user
+**Precondition**: Project exists (may be a group project)
+**Flow**:
+1. In private chat, user asks to edit the project
+2. Bot allows the edit (normal ACL)
+3. Changes are reflected in group and private chat
 
 ---
 
-## 8. Plan de Implementación
+## 7. Privacy Restrictions
 
-### Fase 1: Base de datos (1-2 horas)
+### 7.1 Strict rules
 
-- [ ] Agregar columna `group_id` a tabla `projects`
-- [ ] Agregar columna `private_chat_id` a tabla `users`
-- [ ] Crear tabla `group_members`
-- [ ] Crear índices necesarios
-- [ ] Migración idempotente (schema)
+| Rule | Implementation |
+|------|----------------|
+| Do not expose private projects in groups | `get_shared_projects_in_group()` only returns projects with `group_id` |
+| Reminders isolated per group | `reminders.group_id` (delivery in the group, `list_pending_reminders(..., group_id)`) |
+| Journal isolated per group | `memory.db` with `group_id` + `memory/group_-xxx/` (signed `@user`) |
+| Do not show other users' history | History always per `user_id`+`chat_id`, tenant by `group_id` |
+| Auto-add when creating group project | `create_group_project` adds `group_members` |
+| Manage reminders in group | Any member can view/edit/delete (shared) |
 
-### Fase 2: Lógica de proyectos (2-3 horas)
+### 7.2 Protected scenarios
 
-- [ ] Implementar `get_group_projects()`
-- [ ] Implementar `get_shared_projects_in_group()`
-- [ ] Implementar `add_group_member()` / `get_group_members()`
-- [ ] Implementar `create_group_project()`
-- [ ] Implementar `get_private_chat_id()`
-- [ ] Modificar `create_project()` para aceptar `group_id`
-- [ ] Modificar `upsert_user()` para aceptar `private_chat_id`
-- [ ] Modificar `search_projects()` para scope de grupo
+1. **Ana asks "show me Luis's projects"**: Bot responds "You can only see projects that have been shared with you"
+2. **Luis asks "remind me of something" in a group**: Bot creates the reminder for Luis (with his `private_chat_id`) and responds "Ok, I'll remind you in your private chat"
+3. **Unauthorized member tries to use the bot**: Bot silently ignores
+4. **User asks "show my history" in a group**: Bot responds "History is private"
+5. **User asks "cancel my reminders" in a group**: Bot responds "This action is only available in private chats with the bot"
+5. **User asks "cancel my reminders" in a group**: Bot responds "This action is only available in private chats with the bot"
 
-### Fase 3: Handlers de grupo (2-3 horas)
+---
 
-- [ ] Crear `handle_message_group()`
-- [ ] Modificar `handle_message()` para guardar `private_chat_id`
-- [ ] Modificar `bot.py` para registrar handlers de grupo
-- [ ] Agregar filtros `ChatType.GROUP` / `ChatType.SUPERGROUP`
-- [ ] Modificar comandos para contexto de grupo (`/proyectos`, `/proyecto`, etc.)
-- [ ] Implementar detección de disolución de grupo (`handle_chat_member`)
+## 8. Implementation Plan
 
-### Fase 4: Tools y scope (1-2 horas)
+### Phase 1: Database (1-2 hours)
 
-- [ ] Definir `GROUP_TOOLS` y `PRIVATE_TOOLS`
-- [ ] Modificar `execute_tool()` para aceptar `group_id`
-- [ ] Crear tool `create_group_project`
-- [ ] Actualizar `TOOL_DEFINITIONS`
+- [ ] Add `group_id` column to `projects` table
+- [ ] Add `private_chat_id` column to `users` table
+- [ ] Create `group_members` table
+- [ ] Create necessary indexes
+- [ ] Idempotent migration (schema)
 
-### Fase 5: Configuración (30 min)
+### Phase 2: Project logic (2-3 hours)
 
-- [ ] Agregar `GROUP_RESPONSE_MODE` a `Settings`
-- [ ] Agregar `GROUP_AUTO_ADD_MEMBERS` a `Settings`
+- [ ] Implement `get_group_projects()`
+- [ ] Implement `get_shared_projects_in_group()`
+- [ ] Implement `add_group_member()` / `get_group_members()`
+- [ ] Implement `create_group_project()`
+- [ ] Implement `get_private_chat_id()`
+- [ ] Modify `create_project()` to accept `group_id`
+- [ ] Modify `upsert_user()` to accept `private_chat_id`
+- [ ] Modify `search_projects()` for group scope
 
-### Fase 6: Tests (2-3 horas)
+### Phase 3: Group handlers (2-3 hours)
 
-- [ ] Tests para `get_shared_projects_in_group()`
-- [ ] Tests para `create_group_project()`
-- [ ] Tests para `handle_message_group()`
-- [ ] Tests de privacidad (recordatorios bloqueados en grupo)
-- [ ] Tests de autorización (usuarios no autorizados ignorados)
+- [ ] Create `handle_message_group()`
+- [ ] Modify `handle_message()` to save `private_chat_id`
+- [ ] Modify `bot.py` to register group handlers
+- [ ] Add `ChatType.GROUP` / `ChatType.SUPERGROUP` filters
+- [ ] Modify commands for group context (`/proyectos`, `/proyecto`, etc.)
+- [ ] Implement group dissolution detection (`handle_chat_member`)
 
-### Fase 7: Documentación (1 hora)
+### Phase 4: Tools and scope (1-2 hours)
 
-- [ ] Actualizar `README.md` con sección de grupos
-- [ ] Actualizar `architecture.md`
-- [ ] Actualizar `AGENTS.md`
+- [ ] Define `GROUP_TOOLS` and `PRIVATE_TOOLS`
+- [ ] Modify `execute_tool()` to accept `group_id`
+- [ ] Create `create_group_project` tool
+- [ ] Update `TOOL_DEFINITIONS`
 
-**Total estimado: 10-15 horas**
+### Phase 5: Configuration (30 min)
+
+- [ ] Add `GROUP_RESPONSE_MODE` to `Settings`
+- [ ] Add `GROUP_AUTO_ADD_MEMBERS` to `Settings`
+
+### Phase 6: Tests (2-3 hours)
+
+- [ ] Tests for `get_shared_projects_in_group()`
+- [ ] Tests for `create_group_project()`
+- [ ] Tests for `handle_message_group()`
+- [ ] Privacy tests (reminders blocked in groups)
+- [ ] Authorization tests (unauthorized users ignored)
+
+### Phase 7: Documentation (1 hour)
+
+- [ ] Update `README.md` with groups section
+- [ ] Update `architecture.md`
+- [ ] Update `AGENTS.md`
+
+**Estimated total: 10-15 hours**
 
 ---
 
 ## 9. Testing
 
-### 9.1 Tests unitarios
+### 9.1 Unit tests
 
 ```python
 # tests/test_group_projects.py
 
 def test_get_shared_projects_in_group():
-    """Proyectos compartidos se filtran por group_id."""
-    # Crear proyectos privados y de grupo
-    # Verificar que get_shared_projects_in_group solo retorna los de grupo
+    """Shared projects are filtered by group_id."""
+    # Create private and group projects
+    # Verify that get_shared_projects_in_group only returns group ones
 
 def test_create_group_project_auto_adds_members():
-    """Al crear proyecto en grupo, todos los miembros se añaden."""
-    # Crear grupo con 3 miembros
-    # Crear proyecto en grupo
-    # Verificar que los 3 miembros son project_members
+    """When creating a project in a group, all members are added."""
+    # Create group with 3 members
+    # Create project in group
+    # Verify that all 3 members are project_members
 
 def test_tools_blocked_in_group():
-    """Tools privadas no funcionan en contexto de grupo."""
-    # Ejecutar list_reminders con group_id
-    # Verificar que devuelve error
+    """Private tools don't work in group context."""
+    # Execute list_reminders with group_id
+    # Verify it returns an error
 
 def test_create_reminder_uses_private_chat_id():
-    """create_reminder en grupo usa private_chat_id."""
-    # Ejecutar create_reminder con group_id y private_chat_id
-    # Verificar que el recordatorio se crea con private_chat_id
+    """create_reminder in groups uses private_chat_id."""
+    # Execute create_reminder with group_id and private_chat_id
+    # Verify the reminder is created with private_chat_id
 ```
 
-### 9.2 Tests de integración
+### 9.2 Integration tests
 
 ```python
 # tests/test_group_handlers.py
 
 def test_handle_message_group_scopes_projects():
-    """En grupo, solo se ven proyectos del grupo."""
-    # Simular mensaje en grupo
-    # Verificar que solo se incluyen proyectos del grupo en el contexto
+    """In groups, only group projects are visible."""
+    # Simulate message in group
+    # Verify that only group projects are included in the context
 
 def test_unauthorized_user_ignored_in_group():
-    """Usuarios no autorizados son ignorados en grupo."""
-    # Simular mensaje de usuario no autorizado
-    # Verificar que no se procesa
+    """Unauthorized users are ignored in groups."""
+    # Simulate message from unauthorized user
+    # Verify it is not processed
 
 def test_reminder_in_group_uses_private_chat():
-    """Recordatorio en grupo se envía al chat privado."""
-    # Simular mensaje "recuérdame algo" en grupo
-    # Verificar que el recordatorio se crea con private_chat_id
-    # Verificar que la respuesta es "Ok, te recordaré por tu chat privado"
+    """Reminder in group is sent to private chat."""
+    # Simulate "remind me of something" message in group
+    # Verify the reminder is created with private_chat_id
+    # Verify the response is "Ok, I'll remind you in your private chat"
 ```
 
-### 9.3 Pruebas manuales
+### 9.3 Manual testing
 
-1. Crear grupo de prueba con 2-3 usuarios autorizados
-2. Probar `/proyectos` en grupo
-3. Crear proyecto en grupo con lenguaje natural
-4. Verificar que recordatorios se crean correctamente en grupo (con private_chat_id)
-5. Verificar que el recordatorio llega al chat privado del usuario
-6. Editar proyecto desde privado y verificar cambios en grupo
-7. Probar con usuario no autorizado (debe ser ignorado)
-8. Probar disolución de grupo (proyectos quedan privados)
-
----
-
-## 10. Riesgos y Mitigaciones
-
-| Riesgo | Probabilidad | Impacto | Mitigación |
-|--------|--------------|---------|------------|
-| Filtración de datos entre usuarios | Baja | Alto | Tests de privacidad estrictos, ACL verificada |
-| Complejidad en queries SQL | Media | Medio | Queries simples, índices adecuados |
-| Retrocompatibilidad rota | Baja | Alto | `group_id` nullable, tests de privado existentes |
-| Performance en grupos grandes | Baja | Bajo | Límites en queries, índices |
+1. Create a test group with 2-3 authorized users
+2. Test `/proyectos` in group
+3. Create a project in group using natural language
+4. Verify that reminders are created correctly in groups (with private_chat_id)
+5. Verify that the reminder is delivered to the user's private chat
+6. Edit a project from private chat and verify changes in group
+7. Test with an unauthorized user (should be ignored)
+8. Test group dissolution (projects become private)
 
 ---
 
-## 11. Decisiones de Diseño
+## 10. Risks and Mitigations
 
-| Decisión | Alternativa descartada | Razón |
-|----------|----------------------|-------|
-| `group_id` en `projects` | Nueva tabla `group_projects` | Más simple, menos JOINs, retrocompatible |
-| `group_members` separada de `project_members` | Reutilizar `project_members` | Diferente semántica: grupo vs proyecto |
-| Tools privadas bloqueadas en grupo | Redirigir a privado | Más limpio que enviar al usuario a otro chat |
-| Respuestas públicas en grupo | Respuestas privadas | Transparencia en trabajo colaborativo |
-| Auto-añadir miembros al crear proyecto | Invitación manual | Simplifica flujos de grupo |
+| Risk | Probability | Impact | Mitigation |
+|------|-------------|--------|------------|
+| Data leakage between users | Low | High | Strict privacy tests, verified ACL |
+| Complexity in SQL queries | Medium | Medium | Simple queries, proper indexes |
+| Broken backward compatibility | Low | High | `group_id` nullable, existing private tests |
+| Performance in large groups | Low | Low | Query limits, indexes |
 
 ---
 
-## 12. Reglas de Disolución de Grupo
+## 11. Design Decisions
 
-Cuando un grupo es disuelto o el bot es removido del grupo:
+| Decision | Discarded alternative | Reason |
+|----------|----------------------|--------|
+| `group_id` in `projects` | New `group_projects` table | Simpler, fewer JOINs, backward compatible |
+| `group_members` separate from `project_members` | Reuse `project_members` | Different semantics: group vs project |
+| Private tools blocked in groups | Redirect to private | Cleaner than sending user to another chat |
+| Public responses in groups | Private responses | Transparency in collaborative work |
+| Auto-add members when creating project | Manual invitation | Simplifies group flows |
 
-1. **Proyectos del grupo quedan privados**: `group_id = NULL` para todos los proyectos del grupo
-2. **Dueño conserva el proyecto**: el `user_id` (owner) no cambia
-3. **Colaboradores pierden acceso**: las filas en `project_members` se eliminan para esos usuarios
-4. **El proyecto sigue siendo editable**: el dueño puede editarlo desde su chat privado
-5. **El dueño puede re-compartir**: si el grupo se re-crea o hay un nuevo grupo, puede compartir el proyecto nuevamente
+---
 
-**Implementación**: Detectar la disolución del grupo (evento `MyChatMember` con `status = "kicked"` o `left`) y ejecutar la migración.
+## 12. Group Dissolution Rules
+
+When a group is dissolved or the bot is removed from the group:
+
+1. **Group projects become private**: `group_id = NULL` for all group projects
+2. **Owner keeps the project**: the `user_id` (owner) does not change
+3. **Collaborators lose access**: rows in `project_members` are deleted for those users
+4. **The project remains editable**: the owner can edit it from their private chat
+5. **The owner can re-share**: if the group is re-created or there is a new group, they can share the project again
+
+**Implementation**: Detect group dissolution (`MyChatMember` event with `status = "kicked"` or `"left"`) and execute the migration.
 
 ```python
 async def handle_chat_member(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
@@ -776,23 +776,23 @@ async def handle_chat_member(update: Update, context: ContextTypes.DEFAULT_TYPE)
 def migrate_group_projects_to_private(group_id: int) -> None:
     """Convert group projects to private (owned by creator)."""
     with _get_connection() as conn:
-        # 1. Obtener todos los proyectos del grupo
+        # 1. Get all group projects
         projects = conn.execute(
             "SELECT id, user_id FROM projects WHERE group_id = ?", (group_id,)
         ).fetchall()
         
-        # 2. Para cada proyecto:
+        # 2. For each project:
         for project in projects:
-            # a. Quitar group_id
+            # a. Remove group_id
             conn.execute(
                 "UPDATE projects SET group_id = NULL WHERE id = ?", (project["id"],)
             )
-            # b. Eliminar colaboradores (ya no tiene sentido)
+            # b. Delete collaborators (no longer meaningful)
             conn.execute(
                 "DELETE FROM project_members WHERE project_id = ?", (project["id"],)
             )
         
-        # 3. Eliminar registros de membresía del grupo
+        # 3. Delete group membership records
         conn.execute(
             "DELETE FROM group_members WHERE group_id = ?", (group_id,)
         )
@@ -801,9 +801,9 @@ def migrate_group_projects_to_private(group_id: int) -> None:
 
 ---
 
-## 13. Futuro
+## 13. Future
 
-- [x] Soporte para `/recordar` en grupo (recordatorios se entregan al chat privado)
-- [x] Notificaciones de cambios de proyecto en grupo (estado, prioridad, notas)
-- [ ] Permisos granulares por grupo (solo lectura, edición completa)
-- [ ] Estadísticas de uso por grupo
+- [x] Support for `/recordar` in groups (reminders delivered to private chat)
+- [x] Group project change notifications (status, priority, notes)
+- [ ] Granular permissions per group (read-only, full edit)
+- [ ] Usage statistics per group
