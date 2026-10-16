@@ -1,0 +1,86 @@
+name: Deploy to VPS
+
+# Dispara en cada push a main (y permite ejecución manual)
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install dependencies
+        run: |
+          pip install -r requirements.txt
+          pip install -r requirements-dev.txt
+
+      - name: Run tests with coverage
+        env:
+          BOT_TOKEN: test-token
+          OPENCODE_GO_API_KEY: test-key
+          AUTHORIZED_USERS: ""
+        run: |
+          pytest --cov=bot --cov-report=term-missing --cov-fail-under=80
+
+  deploy:
+    needs: test
+    runs-on: ubuntu-latest
+    # Los secrets se configuran en Settings > Secrets and variables > Actions
+    env:
+      DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
+      DEPLOY_USER: ${{ secrets.DEPLOY_USER }}
+      DEPLOY_PORT: ${{ secrets.DEPLOY_PORT }}
+      DEPLOY_PATH: ${{ secrets.DEPLOY_PATH }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install rsync
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y rsync
+
+      - name: Setup SSH agent with deploy key
+        uses: webfactory/ssh-agent@v0.9.0
+        with:
+          ssh-private-key: ${{ secrets.DEPLOY_KEY }}
+
+      - name: Add VPS host key to known_hosts
+        run: |
+          mkdir -p ~/.ssh
+          ssh-keyscan -p $DEPLOY_PORT $DEPLOY_HOST >> ~/.ssh/known_hosts
+
+      - name: Sync source code to VPS
+        run: |
+          rsync -avz --delete -e "ssh -p $DEPLOY_PORT" \
+            --exclude '.git/' \
+            --exclude '.env' \
+            --exclude '.venv/' \
+            --exclude 'venv/' \
+            --exclude '__pycache__/' \
+            --exclude '*.pyc' \
+            --exclude '*.db' \
+            --exclude '.opencode/' \
+            --exclude 'AGENTS.md' \
+            --exclude 'docs/' \
+            --exclude 'projects/' \
+            ./ $DEPLOY_USER@$DEPLOY_HOST:$DEPLOY_PATH/
+
+      - name: Rebuild and restart bot on VPS
+        run: |
+          ssh -p $DEPLOY_PORT $DEPLOY_USER@$DEPLOY_HOST \
+            "cd $DEPLOY_PATH && docker compose up -d --build 2>&1"
+
+      - name: Prune old Docker images
+        run: |
+          ssh -p $DEPLOY_PORT $DEPLOY_USER@$DEPLOY_HOST \
+            "docker image prune -f 2>&1"

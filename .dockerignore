@@ -1,0 +1,46 @@
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.egg-info/
+dist/
+build/
+
+# Virtual env
+.venv/
+venv/
+env/
+
+# Secrets
+.env
+
+# SQLite data (mounted as volume)
+data/
+
+# Git
+.git/
+
+# OpenCode agent config (dev-only, local)
+.opencode/
+
+# IDE
+.vscode/
+.idea/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Dev-only docs (never copied into the bot container)
+AGENTS.md
+docs/
+README.md
+.env.example
+
+# Test infrastructure (dev-only)
+tests/
+pytest.ini
+requirements-dev.txt
+
+# Not needed in container
+telegram-bot.service

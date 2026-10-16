@@ -1,0 +1,38 @@
+# Lockfile de dependencias del bot — GENERADO, no editar a mano.
+# Incluye dependencias directas y transitivas con versiones exactas para
+# que cada build (local, CI y VPS) instale exactamente el mismo set.
+# Input: requirements.in · Regenerar: ver docs/development.md.
+annotated-types==0.8.0
+anyio==4.14.2
+APScheduler==3.11.3
+brotli==1.2.0
+certifi==2026.7.22
+click==8.4.2
+ddgs==9.15.0
+distro==1.9.0
+fake-useragent==2.2.0
+h11==0.16.0
+h2==4.4.1
+hpack==4.2.0
+httpcore==1.0.9
+httpcore2==2.10.0
+httpx==0.28.1
+httpx2==2.10.0
+hyperframe==6.1.0
+idna==3.18
+jiter==0.16.0
+lxml==6.1.1
+openai==3.1.0
+pillow==12.3.0
+primp==1.3.1
+pydantic==2.13.4
+pydantic_core==2.46.4
+python-dotenv==1.2.2
+python-telegram-bot==22.8
+sniffio==1.3.1
+socksio==1.0.0
+tqdm==4.70.0
+truststore==0.10.4
+typing-inspection==0.4.4
+typing_extensions==4.16.0
+tzlocal==5.4.4

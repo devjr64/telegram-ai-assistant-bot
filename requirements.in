@@ -1,0 +1,10 @@
+# Dependencias directas del bot (declaradas por el humano).
+# NO editar requirements.txt a mano: es el lockfile generado a partir
+# de este archivo (ver docs/development.md → "Dependencias (lockfile)").
+# Regenerar el lock y validar con la suite antes de commitear.
+python-telegram-bot[job-queue]>=21.0
+openai>=1.0.0
+python-dotenv>=1.0.0
+httpx>=0.28.1
+ddgs>=9.0.0
+Pillow>=10.0.0

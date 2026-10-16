@@ -1,0 +1,25 @@
+[Unit]
+Description=Telegram AI Chatbot (OpenCode Go)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=YOUR_USERNAME
+WorkingDirectory=/home/YOUR_USERNAME/telegram-bot
+ExecStart=/home/YOUR_USERNAME/telegram-bot/venv/bin/python main.py
+Restart=always
+RestartSec=10
+
+# Security hardening
+NoNewPrivileges=yes
+PrivateTmp=yes
+ProtectSystem=strict
+ProtectHome=read-only
+ReadWritePaths=/home/YOUR_USERNAME/telegram-bot
+
+# Environment
+EnvironmentFile=/home/YOUR_USERNAME/telegram-bot/.env
+
+[Install]
+WantedBy=multi-user.target

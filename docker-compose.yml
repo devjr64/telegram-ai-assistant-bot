@@ -1,0 +1,21 @@
+services:
+  telegram-bot:
+    build: .
+    container_name: telegram-bot
+    restart: ${RESTART_POLICY:-no}
+    env_file:
+      - .env
+    environment:
+      - DATA_DIR=/app/data
+    volumes:
+      # Docker-managed volume: secure, no permission issues, persists across rebuilds
+      - bot_data:/app/data
+    # No port mapping needed — Telegram long-polling reaches out, not in
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+volumes:
+  bot_data:

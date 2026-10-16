@@ -1,0 +1,40 @@
+# Secrets
+.env
+
+# Private folder
+.private/
+
+# Temporary agent work dir
+.tmp/
+
+# OpenCode agent config (dev-only, local)
+.opencode/
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.egg-info/
+dist/
+build/
+
+# SQLite databases
+*.db
+
+# IDE
+.vscode/
+.idea/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Virtual environment
+venv/
+.venv/
+env/
+
+# Test artifacts
+.coverage
+htmlcov/
+.pytest_cache/
